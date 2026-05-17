@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { Sprout } from "lucide-react";
 
 export default function About() {
   const handleScroll = (href: string) => {
@@ -77,8 +78,8 @@ export default function About() {
               className="p-6 bg-primary-pale rounded-3xl border border-primary-green/20 my-6 relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-accent-yellow/10 rounded-full blur-xl" />
-              <h3 className="font-serif text-lg font-extrabold text-primary-deep mb-2">
-                🌱 Une vision d'envergure africaine
+              <h3 className="font-serif text-lg font-extrabold text-primary-deep mb-2 flex items-center gap-1.5">
+                <Sprout className="w-5 h-5 text-primary-green shrink-0" /> Une vision d'envergure africaine
               </h3>
               <p className="font-sans text-sm sm:text-base text-primary-deep font-semibold leading-relaxed">
                 Derrière cette rigueur quotidienne, une ambition plus grande nous porte :{" "}
@@ -91,8 +92,8 @@ export default function About() {
             {/* Signature Area */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-4">
               <div>
-                <p className="font-serif text-xl font-extrabold text-primary-deep italic">
-                  On y va ensemble. 🌱
+                <p className="font-serif text-xl font-extrabold text-primary-deep italic flex items-center gap-1">
+                  On y va ensemble. <Sprout className="w-5 h-5 text-primary-green shrink-0" />
                 </p>
                 <p className="font-sans text-xs text-gray-text font-bold uppercase tracking-wider mt-1">
                   Victoire AHOGNON · Directrice Win Agro

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { leadFormSchema, LeadFormData, serviceLabels } from "@/lib/validations";
+import { Smartphone, MessageSquare, Sprout, AlertTriangle, ArrowRight } from "lucide-react";
 
 interface LeadFormProps {
   selectedService: string;
@@ -118,8 +119,8 @@ Mon numéro : ${data.phone}`;
             {/* Direct Contact Anchors */}
             <div className="space-y-4 pt-4 border-t border-primary-pale">
               <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center text-lg text-primary-green">
-                  📱
+                <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center text-primary-green">
+                  <Smartphone className="w-5 h-5" />
                 </span>
                 <div>
                   <p className="text-xs text-gray-400 font-sans uppercase font-bold tracking-wider">
@@ -137,8 +138,8 @@ Mon numéro : ${data.phone}`;
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center text-lg text-primary-green">
-                  📱
+                <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center text-primary-green">
+                  <Smartphone className="w-5 h-5" />
                 </span>
                 <div>
                   <p className="text-xs text-gray-400 font-sans uppercase font-bold tracking-wider">
@@ -164,7 +165,7 @@ Mon numéro : ${data.phone}`;
                 whileTap={{ scale: 0.98 }}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary-green hover:bg-primary-deep text-white font-sans font-bold text-base shadow-md cursor-pointer btn-shimmer"
               >
-                💬 Écrire directement sur WhatsApp
+                <MessageSquare className="w-5 h-5 shrink-0" /> Écrire directement sur WhatsApp
               </motion.a>
             </div>
           </div>
@@ -183,7 +184,7 @@ Mon numéro : ${data.phone}`;
                     exit={{ opacity: 0 }}
                     className="text-center py-12 flex flex-col items-center justify-center"
                   >
-                    <span className="text-6xl mb-6 animate-bounce">🌱</span>
+                    <Sprout className="w-16 h-16 text-primary-green mb-6 animate-bounce" />
                     <h3 className="font-serif text-2xl font-black text-primary-deep mb-4 leading-tight">
                       {successMessage}
                     </h3>
@@ -227,8 +228,8 @@ Mon numéro : ${data.phone}`;
                         }`}
                       />
                       {errors.fullName && (
-                        <p className="text-xs font-bold text-red-500 mt-1 font-sans">
-                          ⚠️ {errors.fullName.message}
+                        <p className="text-xs font-bold text-red-500 mt-1 font-sans flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> {errors.fullName.message}
                         </p>
                       )}
                     </div>
@@ -250,8 +251,8 @@ Mon numéro : ${data.phone}`;
                         }`}
                       />
                       {errors.phone && (
-                        <p className="text-xs font-bold text-red-500 mt-1 font-sans">
-                          ⚠️ {errors.phone.message}
+                        <p className="text-xs font-bold text-red-500 mt-1 font-sans flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> {errors.phone.message}
                         </p>
                       )}
                     </div>
@@ -279,8 +280,8 @@ Mon numéro : ${data.phone}`;
                         <option value="autre">Autre demande spécifique</option>
                       </select>
                       {errors.service && (
-                        <p className="text-xs font-bold text-red-500 mt-1 font-sans">
-                          ⚠️ {errors.service.message}
+                        <p className="text-xs font-bold text-red-500 mt-1 font-sans flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> {errors.service.message}
                         </p>
                       )}
                     </div>
@@ -302,8 +303,8 @@ Mon numéro : ${data.phone}`;
                         }`}
                       />
                       {errors.message && (
-                        <p className="text-xs font-bold text-red-500 mt-1 font-sans">
-                          ⚠️ {errors.message.message}
+                        <p className="text-xs font-bold text-red-500 mt-1 font-sans flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> {errors.message.message}
                         </p>
                       )}
                     </div>
@@ -324,7 +325,9 @@ Mon numéro : ${data.phone}`;
                           Transmission en cours...
                         </>
                       ) : (
-                        "Envoyer ma demande et ouvrir WhatsApp →"
+                        <>
+                          Envoyer ma demande et ouvrir WhatsApp <ArrowRight className="w-5 h-5 shrink-0" />
+                        </>
                       )}
                     </motion.button>
                   </motion.form>

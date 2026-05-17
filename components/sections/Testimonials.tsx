@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { Star, XCircle, Wrench, Sprout } from "lucide-react";
 
 export default function Testimonials() {
   const testimonials = [
@@ -93,11 +94,9 @@ export default function Testimonials() {
 
               <div className="space-y-4 relative z-10">
                 {/* Gold Stars */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   {Array.from({ length: t.stars }).map((_, i) => (
-                    <span key={i} className="text-accent-yellow text-lg">
-                      ★
-                    </span>
+                    <Star key={i} className="w-4 h-4 fill-accent-yellow text-accent-yellow shrink-0" />
                   ))}
                 </div>
 
@@ -109,25 +108,36 @@ export default function Testimonials() {
                 <div className="w-full h-px bg-primary-pale/60 my-2" />
 
                 {/* Body Details (Psychological Flow) */}
-                <div className="space-y-3 text-sm font-sans leading-relaxed text-gray-text">
-                  <p>
-                    <strong className="text-primary-deep text-xs uppercase tracking-wider block mb-1">
-                      ❌ Avant Win Agro :
-                    </strong>
-                    "{t.before}"
-                  </p>
-                  <p>
-                    <strong className="text-primary-green text-xs uppercase tracking-wider block mb-1">
-                      🔧 Action de Victoire :
-                    </strong>
-                    {t.action}
-                  </p>
-                  <p>
-                    <strong className="text-accent-dark text-xs uppercase tracking-wider block mb-1">
-                      🌱 Aujourd'hui :
-                    </strong>
-                    <span className="font-semibold text-primary-deep">"{t.now}"</span>
-                  </p>
+                <div className="space-y-4 text-sm font-sans leading-relaxed text-gray-text">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-primary-deep text-xs uppercase tracking-wider block mb-0.5">
+                          Avant Win Agro
+                        </strong>
+                        "{t.before}"
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Wrench className="w-4 h-4 text-primary-green shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-primary-green text-xs uppercase tracking-wider block mb-0.5">
+                          Action de Victoire
+                        </strong>
+                        {t.action}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Sprout className="w-4 h-4 text-accent-dark shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-accent-dark text-xs uppercase tracking-wider block mb-0.5">
+                          Aujourd'hui
+                        </strong>
+                        <span className="font-semibold text-primary-deep">"{t.now}"</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

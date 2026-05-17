@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Crown, Info } from "lucide-react";
 
 interface ServicesProps {
   onSelectService: (serviceKey: string) => void;
@@ -130,8 +131,8 @@ export default function Services({ onSelectService }: ServicesProps) {
                   className="relative rounded-3xl bg-primary-deep text-white border-2 border-accent-yellow shadow-2xl p-8 flex flex-col justify-between transition-all duration-300 card-shimmer"
                 >
                   {/* Premium Badge */}
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full bg-accent-yellow text-primary-deep font-sans font-black text-xs uppercase tracking-wider shadow-md">
-                    👑 Plus Haute Valeur
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full bg-accent-yellow text-primary-deep font-sans font-black text-xs uppercase tracking-wider shadow-md flex items-center gap-1">
+                    <Crown className="w-3.5 h-3.5 shrink-0" /> Plus Haute Valeur
                   </div>
 
                   <div>
@@ -168,8 +169,8 @@ export default function Services({ onSelectService }: ServicesProps) {
 
                   {/* Footer Area */}
                   <div className="mt-auto">
-                    <p className="text-xs text-primary-pale font-sans font-medium mb-4 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-center">
-                      ℹ️ {service.availability}
+                    <p className="text-xs text-primary-pale font-sans font-medium mb-4 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-center flex items-center justify-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 shrink-0 text-accent-yellow" /> {service.availability}
                     </p>
                     <motion.button
                       onClick={() => handleServiceClick(service.key)}
@@ -235,8 +236,8 @@ export default function Services({ onSelectService }: ServicesProps) {
 
                 {/* Footer Area */}
                 <div className="mt-auto">
-                  <p className="text-xs text-primary-green font-sans font-medium mb-4 py-2 px-3 rounded-lg bg-primary-pale border border-primary-pale/50 text-center">
-                    ℹ️ {service.availability}
+                  <p className="text-xs text-primary-green font-sans font-medium mb-4 py-2 px-3 rounded-lg bg-primary-pale border border-primary-pale/50 text-center flex items-center justify-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 shrink-0 text-primary-deep" /> {service.availability}
                   </p>
                   <motion.button
                     onClick={() => handleServiceClick(service.key)}

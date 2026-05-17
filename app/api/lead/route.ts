@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     // 3. Return success and variables for client-side WhatsApp redirection
     return NextResponse.json({
       success: true,
-      message: "Reçu ✓ Victoire te contacte dans les 24h. 🌱",
+      message: "Reçu ✓ Victoire te contacte dans les 24h.",
       data: {
         fullName,
         phone,

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion, Variants } from "framer-motion";
+import { Globe, TrendingUp, Handshake, Leaf, Zap } from "lucide-react";
 
 export default function WhyUs() {
   const differentiations = [
@@ -9,31 +10,31 @@ export default function WhyUs() {
       num: "01",
       title: "Expertise terrain béninoise",
       description: "On ne t'applique pas des méthodes importées d'Europe déconnectées de nos réalités. On travaille en s'adaptant à notre climat, aux intrants disponibles localement et à nos marchés. Ce qu'on t'enseigne fonctionne vraiment ici.",
-      icon: "🌍",
+      icon: Globe,
     },
     {
       num: "02",
       title: "Résultats réels et mesurables",
       description: "Nos éleveurs partenaires voient des résultats financiers et sanitaires concrets : un taux de survie de leurs bandes nettement amélioré, des coûts d'alimentation maîtrisés et des fermes rentables dès les premiers cycles.",
-      icon: "📈",
+      icon: TrendingUp,
     },
     {
       num: "03",
       title: "Présence active après la vente",
       description: "Tu n'es pas seul une fois ton chèque signé ou ta formation validée. Victoire et ses équipes restent joignables. On passe visiter les installations, on suit ta progression sur WhatsApp et on intervient physiquement en cas de doute.",
-      icon: "🤝",
+      icon: Handshake,
     },
     {
       num: "04",
       title: "Vision biologique et durable",
       description: "Zéro intrant chimique. Nous privilégions des méthodes prophylactiques saines et biologiques pour tes animaux, pour ta santé, et pour préserver la fertilité de nos sols. C'est une conviction profonde, pas du simple affichage écologique.",
-      icon: "🍃",
+      icon: Leaf,
     },
     {
       num: "05",
       title: "Réseau Afrique & Europe",
       description: "Un écosystème d'entraide agricole en construction qui grandit chaque mois. Nous connectons nos porteurs de projets à des opportunités de distribution, de financement et de conseils techniques par-delà nos frontières.",
-      icon: "⚡",
+      icon: Zap,
     },
   ];
 
@@ -122,7 +123,7 @@ export default function WhyUs() {
                   <span className="font-serif text-3xl font-black text-primary-green bg-primary-pale w-12 h-12 rounded-full flex items-center justify-center">
                     {item.num}
                   </span>
-                  <span className="text-3xl filter drop-shadow-sm">{item.icon}</span>
+                  <item.icon className="w-8 h-8 text-primary-green shrink-0 filter drop-shadow-sm" />
                 </div>
 
                 <h3 className="font-serif text-lg sm:text-xl font-bold text-primary-deep leading-tight mb-4">

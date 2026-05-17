@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { Sprout, ArrowRight } from "lucide-react";
 
 export default function Hero() {
   const handleScroll = (href: string) => {
@@ -62,13 +63,13 @@ export default function Hero() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-green/30 border border-primary-green/50 text-accent-yellow font-sans font-bold text-xs uppercase tracking-wider mb-8"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-green/30 border border-primary-green/50 text-accent-yellow font-sans font-bold text-xs uppercase tracking-wider mb-8 animate-pulse-slow"
           >
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-yellow opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-yellow"></span>
             </span>
-            🌱 Plus de 500+ éleveurs déjà accompagnés au Bénin
+            <Sprout className="w-4 h-4 text-accent-yellow shrink-0" /> Plus de 500+ éleveurs déjà accompagnés au Bénin
           </motion.div>
 
           {/* Staggered Main Title (H1) */}
@@ -143,7 +144,7 @@ export default function Hero() {
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-primary-green hover:bg-primary-green/90 text-white font-sans font-bold text-base shadow-xl border border-primary-green flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-4 focus:ring-primary-green/50 btn-shimmer"
             >
               Être accompagné sur mon projet
-              <span className="text-lg">→</span>
+              <ArrowRight className="w-5 h-5 shrink-0" />
             </motion.button>
 
             <div className="flex items-center gap-2 text-sm text-gray-300 font-sans font-medium">

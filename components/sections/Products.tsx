@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Bird, Wheat, Trees } from "lucide-react";
 
 export default function Products() {
   const whatsappNumber = "2290161336548";
@@ -10,7 +11,7 @@ export default function Products() {
     {
       title: "Élevage (Animaux vivants)",
       hook: "Des animaux sélectionnés pour le terrain béninois — pas pour le catalogue.",
-      icon: "🐓",
+      icon: Bird,
       items: [
         "Poussins d'un jour vigoureux (coquellets, goliaths, pondeuses)",
         "Pintadeaux, dindonneaux et cailletaux d'excellente souche",
@@ -18,12 +19,12 @@ export default function Products() {
         "Volailles prêtes à consommer (abattues proprement ou vivantes)",
         "Œufs de table frais collectés tous les matins",
       ],
-      whatsappMsg: "Bonjour Victoire, je souhaite commander des animaux vivants (poussins, pintades, lapins...) auprès de Win Agro. Quels sont les tarifs et disponibilités actuels ?",
+      whatsappMsg: "Bonjour Victoire, je souhaite commander des animaux vivants (poussins, pintades, lapins...) auprès de Win Agro. Quels sont les tarifs et disponibilités actifs ?",
     },
     {
       title: "Nutrition Animale",
       hook: "La mortalité dans les élevages béninois vient souvent d'une alimentation mal adaptée.",
-      icon: "🌾",
+      icon: Wheat,
       items: [
         "Provendes de haute qualité nutritionnelle — en gros & détail",
         "Formulations équilibrées adaptées à chaque phase de croissance",
@@ -34,7 +35,7 @@ export default function Products() {
     {
       title: "Agriculture & Plants",
       hook: "Pour diversifier ton exploitation et augmenter durablement sa valeur.",
-      icon: "🌳",
+      icon: Trees,
       items: [
         "Plants d'eucalyptus vigoureux pour le reboisement ou la vente de bois",
         "Autres espèces de plants agricoles sélectionnés pour nos sols",
@@ -118,8 +119,8 @@ export default function Products() {
                 <div>
                   {/* Category Header */}
                   <div className="flex items-center gap-4 mb-4">
-                    <span className="text-4xl p-3 bg-primary-pale rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                      {category.icon}
+                    <span className="p-3 bg-primary-pale rounded-2xl group-hover:scale-110 transition-transform duration-300 flex items-center justify-center text-primary-deep">
+                      <category.icon className="w-8 h-8 text-primary-deep" />
                     </span>
                     <h3 className="font-serif text-xl sm:text-2xl font-bold text-primary-deep leading-tight">
                       {category.title}

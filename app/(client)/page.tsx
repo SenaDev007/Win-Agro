@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import WhatsAppFAB from "@/components/layout/WhatsAppFAB";
-import Footer from "@/components/layout/Footer";
+import Footer4Col from "@/components/ui/footer-column";
 import Hero from "@/components/sections/Hero";
 import Stats from "@/components/sections/Stats";
 import Services from "@/components/sections/Services";
@@ -54,7 +54,7 @@ export default function Home() {
       </main>
 
       {/* 3. Global Footer & Floating Support Action */}
-      <Footer />
+      <Footer4Col />
       <WhatsAppFAB />
     </>
   );
