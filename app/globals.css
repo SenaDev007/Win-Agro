@@ -64,6 +64,7 @@
     position: relative;
     overflow: hidden;
     border-radius: 50%;
+    clip-path: circle(50%);
   }
   .logo-light-beam::before {
     content: '';

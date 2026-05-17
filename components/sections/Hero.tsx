@@ -1,11 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sprout, ArrowRight } from "lucide-react";
 
 export default function Hero() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay prevented or video loading failed:", err);
+      });
+    }
+  }, []);
+
   const handleScroll = (href: string) => {
     const targetElement = document.querySelector(href);
     if (targetElement) {
@@ -27,10 +37,12 @@ export default function Hero() {
       {/* 1. Premium Background Video with Green Opacity Overlay */}
       <div className="absolute inset-0 z-0">
         <video
+          ref={videoRef}
           autoPlay
           loop
           muted
           playsInline
+          preload="auto"
           className="w-full h-full object-cover object-center scale-102"
         >
           <source src="/WinAgro_Hero_Video.mp4" type="video/mp4" />

@@ -62,7 +62,7 @@ export default function Navbar() {
             className="flex items-center gap-3 focus:outline-none"
             aria-label="Win Agro — Retour en haut"
           >
-            <div className="relative w-12 h-12 rounded-full border border-primary-green/30 bg-white logo-light-beam shadow-md flex items-center justify-center p-0.5">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden border border-primary-green/30 bg-white logo-light-beam shadow-md flex items-center justify-center p-0.5">
               <Image
                 src="/favicon-for-app/icon0.svg"
                 alt="Win Agro Logo"
@@ -163,13 +163,25 @@ export default function Navbar() {
               </a>
             ))}
             <div className="pt-4 border-t border-primary-pale flex flex-col gap-4">
-              <a
+              <motion.a
                 href="#contact"
                 onClick={(e) => handleLinkClick(e, "#contact")}
-                className="w-full inline-flex items-center justify-center px-5 py-3 rounded-full bg-primary-green hover:bg-primary-deep text-white font-sans font-bold text-base shadow-md transition-colors"
+                whileHover={{ scale: 1.05, boxShadow: "0px 10px 25px rgba(9, 137, 71, 0.4)" }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  scale: [1, 1.03, 1],
+                }}
+                transition={{
+                  scale: {
+                    repeat: Infinity,
+                    duration: 2.5,
+                    ease: "easeInOut"
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center px-5 py-3 rounded-full bg-primary-green hover:bg-primary-green/90 text-white font-sans font-bold text-base shadow-md transition-colors cursor-pointer btn-shimmer"
               >
                 Être accompagné →
-              </a>
+              </motion.a>
             </div>
           </div>
         </div>

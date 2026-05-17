@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sprout } from "lucide-react";
+import TeamShowcase from "@/components/ui/team-showcase";
 
 export default function About() {
   const handleScroll = (href: string) => {
@@ -111,26 +112,12 @@ export default function About() {
             </div>
           </div>
 
-          {/* 2. Professional Photo (40%) */}
-          <div className="w-full lg:w-2/5">
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-[2.5rem] border-4 border-primary-pale bg-primary-pale shadow-2xl flex items-center justify-center"
-            >
-              {/* Decorative Frame */}
-              <div className="absolute inset-0 border border-primary-green/20 rounded-[2.3rem] pointer-events-none z-10" />
-              
-              <Image
-                src="/victoire_terrain.jpg"
-                alt="Portrait terrain de Victoire AHOGNON"
-                fill
-                className="object-cover transition-transform duration-500 hover:scale-105"
-                sizes="(max-w-768px) 100vw, 400px"
-              />
-            </motion.div>
+          {/* 2. Professional Photo (40%) -> Premium Team Showcase */}
+          <div className="w-full lg:w-2/5 flex flex-col justify-center">
+            <div className="inline-block px-3 py-1 rounded-full bg-primary-pale text-primary-deep text-xs font-sans font-bold uppercase tracking-wider mb-4 mx-auto lg:mx-0 w-max">
+              L'Équipe de Terrain
+            </div>
+            <TeamShowcase />
           </div>
 
         </div>
