@@ -1,26 +1,176 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-primary-deep: #076B37;
+  --color-primary-green: #098947;
+  --color-primary-pale: #E6F4EC;
+  --color-accent-yellow: #FDDD00;
+  --color-accent-dark: #C8A800;
+  --color-accent-pale: #FFFBE0;
+  --color-cream: #FAFAF3;
+  --color-noir-vert: #0F1F14;
+  --color-gray-text: #4A4A4A;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, Cambria, "Times New Roman", Times, serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --animate-pulse-slow: pulse-slow 2s infinite ease-in-out;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-subtle-spin: subtle-spin 20s linear infinite;
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(9, 137, 71, 0.7);
+    }
+    50% {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 12px rgba(9, 137, 71, 0);
+    }
+  }
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes subtle-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-150%) skewX(-20deg); }
+    100% { transform: translateX(200%) skewX(-20deg); }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: translateX(-150%) skewX(-20deg);
+    animation: shimmer 2.5s infinite linear;
+    pointer-events: none;
+  }
+
+  .card-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-shimmer:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: translateX(-150%) skewX(-20deg);
+    animation: shimmer 1.5s infinite linear;
+    pointer-events: none;
+    z-index: 10;
+  }
 }
+
+:root {
+  --background: #FAFAF3;
+  --foreground: #4A4A4A;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAFAF3;
+}
+::-webkit-scrollbar-thumb {
+  background: #098947;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #076B37;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Luxury SVG background texture overlay */
+.bg-grain {
+  background-image: radial-gradient(rgba(7, 107, 55, 0.03) 1px, transparent 0), radial-gradient(rgba(7, 107, 55, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Glassmorphism styling */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 228, 208, 0.4);
+}
+
+/* CTA Highlight style */
+.underline-accent {
+  position: relative;
+}
+.underline-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background-color: #FDDD00;
+  z-index: -1;
+  transform: skewX(-12deg);
+  opacity: 0.8;
+}
+
+/* Hide Google Translate UI elements for seamless premium experience */
+.skiptranslate,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-te-banner {
+  display: none !important;
+  visibility: hidden !important;
+}
+body {
+  top: 0px !important;
+  position: static !important;
+}
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
