@@ -65,9 +65,9 @@ const data = {
 };
 
 const socialLinks = [
-  { icon: FacebookIcon, label: 'Facebook', href: data.facebookLink },
-  { icon: WhatsAppIcon, label: 'WhatsApp', href: data.whatsappLink },
-  { icon: LinkedinIcon, label: 'LinkedIn', href: data.linkedinLink },
+  { icon: FacebookIcon, label: 'Facebook', href: data.facebookLink, hoverClass: 'hover:bg-[#1877F2]' },
+  { icon: WhatsAppIcon, label: 'WhatsApp', href: data.whatsappLink, hoverClass: 'hover:bg-[#25D366]' },
+  { icon: LinkedinIcon, label: 'LinkedIn', href: data.linkedinLink, hoverClass: 'hover:bg-[#0A66C2]' },
 ];
 
 const aboutLinks = [
@@ -148,13 +148,13 @@ export default function Footer4Col() {
             </p>
 
             <ul className="mt-8 flex gap-4 justify-start">
-              {socialLinks.map(({ icon: Icon, label, href }) => (
+              {socialLinks.map(({ icon: Icon, label, href, hoverClass }) => (
                 <li key={label}>
                   <a
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-primary-green/20 hover:bg-primary-green text-white hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-md"
+                    className={`w-10 h-10 rounded-full bg-primary-green/20 text-white flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-md ${hoverClass}`}
                   >
                     <span className="sr-only">{label}</span>
                     <Icon className="w-5 h-5" />
