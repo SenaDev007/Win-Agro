@@ -23,7 +23,7 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     name: 'Victoire AHOGNON',
     role: 'FONDATRICE & DIRECTRICE',
     image: '/victoire_terrain.jpg',
-    social: { linkedin: 'https://www.linkedin.com/in/victoire-ahognon-1b1b1b1b' },
+    social: { linkedin: 'https://www.linkedin.com/in/victoire-ahognon-0a7bb41b9/' },
   },
 ];
 
@@ -76,8 +76,8 @@ export default function TeamShowcase({ members = DEFAULT_MEMBERS }: TeamShowcase
             {member.role}
           </p>
 
-          <p className="text-gray-600 text-sm font-sans leading-relaxed mb-5 max-w-sm">
-            Ingénieure agronome passionnée et spécialiste de l'aviculture biologique au Bénin. Elle accompagne au quotidien les éleveurs vers l'excellence technique et financière, s'assurant que chaque projet devienne une source de revenus stable et florissante.
+          <p className="text-gray-600 text-sm font-sans leading-relaxed mb-5 max-w-sm text-left">
+            Entrepreneure agroalimentaire engagée, experte en élevage durable & agrobusiness intégré, au Bénin. Elle accompagne au quotidien les éleveurs vers l'excellence technique et financière, s'assurant que chaque projet devienne une source de revenus stable et florissante.
           </p>
 
           {member.social?.linkedin && (
@@ -85,7 +85,7 @@ export default function TeamShowcase({ members = DEFAULT_MEMBERS }: TeamShowcase
               href={member.social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-green hover:bg-primary-deep text-white text-xs font-sans font-bold transition-all duration-300 shadow-md hover:-translate-y-0.5 active:translate-y-0"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0A66C2] hover:bg-[#004182] text-white text-xs font-sans font-bold transition-all duration-300 shadow-md hover:-translate-y-0.5 active:translate-y-0"
             >
               <FaLinkedinIn size={12} className="shrink-0" /> Rejoindre sur LinkedIn
             </a>

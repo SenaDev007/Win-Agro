@@ -114,9 +114,6 @@ export default function About() {
 
           {/* 2. Professional Photo (40%) -> Premium Team Showcase */}
           <div className="w-full lg:w-2/5 flex flex-col justify-center">
-            <div className="inline-block px-3 py-1 rounded-full bg-primary-pale text-primary-deep text-xs font-sans font-bold uppercase tracking-wider mb-4 mx-auto lg:mx-0 w-max">
-              L'Équipe de Terrain
-            </div>
             <TeamShowcase />
           </div>
 
