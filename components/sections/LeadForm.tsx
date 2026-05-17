@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { leadFormSchema, LeadFormData, serviceLabels } from "@/lib/validations";
 import { Smartphone, MessageSquare, Sprout, AlertTriangle, ArrowRight } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/icons";
 
 interface LeadFormProps {
   selectedService: string;
@@ -165,7 +166,7 @@ Mon numéro : ${data.phone}`;
                 whileTap={{ scale: 0.98 }}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary-green hover:bg-primary-deep text-white font-sans font-bold text-base shadow-md cursor-pointer btn-shimmer"
               >
-                <MessageSquare className="w-5 h-5 shrink-0" /> Écrire directement sur WhatsApp
+                <WhatsAppIcon className="w-5 h-5 shrink-0" /> Écrire directement sur WhatsApp
               </motion.a>
             </div>
           </div>

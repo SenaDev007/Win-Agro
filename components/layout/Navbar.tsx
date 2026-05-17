@@ -61,13 +61,13 @@ export default function Navbar() {
             className="flex items-center gap-3 focus:outline-none"
             aria-label="Win Agro — Retour en haut"
           >
-            <div className="relative w-12 h-12 overflow-hidden rounded-full border border-primary-pale bg-white flex items-center justify-center p-0.5 shadow-sm">
+            <div className="relative w-12 h-12 logo-light-beam shadow-sm flex items-center justify-center p-0.5">
               <Image
                 src="/favicon-for-app/icon0.svg"
                 alt="Win Agro Logo"
-                width={48}
-                height={48}
-                className="object-contain"
+                width={44}
+                height={44}
+                className="object-contain rounded-full"
                 priority
               />
             </div>
