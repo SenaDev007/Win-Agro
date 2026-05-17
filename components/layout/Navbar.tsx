@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
+import { motion } from "framer-motion";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { PillBase } from "@/components/ui/3d-adaptive-navigation-bar";
 
@@ -61,7 +62,7 @@ export default function Navbar() {
             className="flex items-center gap-3 focus:outline-none"
             aria-label="Win Agro — Retour en haut"
           >
-            <div className="relative w-12 h-12 logo-light-beam shadow-sm flex items-center justify-center p-0.5">
+            <div className="relative w-12 h-12 rounded-full border border-primary-green/30 bg-white logo-light-beam shadow-md flex items-center justify-center p-0.5">
               <Image
                 src="/favicon-for-app/icon0.svg"
                 alt="Win Agro Logo"
@@ -89,13 +90,25 @@ export default function Navbar() {
           {/* CTA Sticky Button & Language Switcher */}
           <div className="hidden md:flex items-center gap-4">
             <LanguageSwitcher />
-            <a
+            <motion.a
               href="#contact"
               onClick={(e) => handleLinkClick(e, "#contact")}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary-green hover:bg-primary-deep text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:border-b-2 hover:border-accent-yellow active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-offset-2"
+              whileHover={{ scale: 1.05, boxShadow: "0px 10px 25px rgba(9, 137, 71, 0.4)" }}
+              whileTap={{ scale: 0.98 }}
+              animate={{
+                scale: [1, 1.03, 1],
+              }}
+              transition={{
+                scale: {
+                  repeat: Infinity,
+                  duration: 2.5,
+                  ease: "easeInOut"
+                }
+              }}
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary-green hover:bg-primary-green/90 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-offset-2 btn-shimmer"
             >
               Être accompagné →
-            </a>
+            </motion.a>
           </div>
 
           {/* Mobile Menu Button */}

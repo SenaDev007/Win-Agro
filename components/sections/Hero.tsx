@@ -24,16 +24,22 @@ export default function Hero() {
       id="hero"
       className="relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden bg-primary-deep text-white"
     >
-      {/* 1. Premium Background Image with Green Opacity Overlay */}
+      {/* 1. Premium Background Video with Green Opacity Overlay */}
       <div className="absolute inset-0 z-0">
-        {/* Authentic West African farm photo */}
-        <Image
-          src="/ferme_moderne.png"
-          alt="Win Agro Ferme d'Élevage Moderne au Bénin"
-          fill
-          priority
-          className="object-cover object-center scale-102"
-        />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover object-center scale-102"
+        >
+          <source src="/WinAgro_Hero_Video.mp4" type="video/mp4" />
+          <img
+            src="/ferme_moderne.png"
+            alt="Win Agro Ferme d'Élevage Moderne au Bénin"
+            className="w-full h-full object-cover object-center"
+          />
+        </video>
 
         {/* Dynamic mesh gradients overlaying photo */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-deep/90 via-primary-deep/80 to-noir-vert/90 mix-blend-multiply" />

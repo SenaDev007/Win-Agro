@@ -18,18 +18,46 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLanguage(lang);
     localStorage.setItem("winagro_lang", lang);
 
-    // Update the Google Translate widget select element and dispatch change event
+    // Set the googtrans cookie for Google Translate
+    // Format: /pageLanguage/targetLanguage -> /fr/en or /fr/fr
+    const cookieValue = `/fr/${lang}`;
+    document.cookie = `googtrans=${cookieValue}; path=/;`;
+    
+    // Set for current hostname and base domain to ensure production and local sync
+    const host = window.location.hostname;
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=.${host};`;
+    const hostParts = host.split('.');
+    if (hostParts.length > 2) {
+      const baseDomain = hostParts.slice(-2).join('.');
+      document.cookie = `googtrans=${cookieValue}; path=/; domain=.${baseDomain};`;
+    }
+
+    // Also update the select dropdown in the DOM if loaded
     const translateCombo = document.querySelector(".goog-te-combo") as HTMLSelectElement;
     if (translateCombo) {
       translateCombo.value = lang;
       translateCombo.dispatchEvent(new Event("change"));
     }
+
+    // Refresh the page to guarantee clean translation of all React hydrated nodes
+    window.location.reload();
   };
 
   useEffect(() => {
     const saved = localStorage.getItem("winagro_lang") as Language;
     if (saved === "fr" || saved === "en") {
       setLanguage(saved);
+      
+      // Ensure the cookie is populated on load
+      const cookieValue = `/fr/${saved}`;
+      document.cookie = `googtrans=${cookieValue}; path=/;`;
+      const host = window.location.hostname;
+      document.cookie = `googtrans=${cookieValue}; path=/; domain=.${host};`;
+      const hostParts = host.split('.');
+      if (hostParts.length > 2) {
+        const baseDomain = hostParts.slice(-2).join('.');
+        document.cookie = `googtrans=${cookieValue}; path=/; domain=.${baseDomain};`;
+      }
       
       // Delay to ensure the Google Translate widget has fully loaded in DOM
       const timer = setTimeout(() => {
@@ -38,7 +66,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           translateCombo.value = saved;
           translateCombo.dispatchEvent(new Event("change"));
         }
-      }, 1500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, []);

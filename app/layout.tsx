@@ -228,7 +228,7 @@ export default function RootLayout({
         </LanguageProvider>
 
         {/* Hidden Google Translate Widget */}
-        <div id="google_translate_element" className="hidden" style={{ display: "none" }} />
+        <div id="google_translate_element" className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" />
         
         <Script id="google-translate-config" strategy="afterInteractive">
           {`
@@ -243,7 +243,7 @@ export default function RootLayout({
           `}
         </Script>
         <Script
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
           strategy="afterInteractive"
         />
 
