@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { PillBase } from "@/components/ui/3d-adaptive-navigation-bar";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -80,19 +81,10 @@ export default function Navbar() {
             </div>
           </a>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link, idx) => (
-              <a
-                key={idx}
-                href={link.href}
-                onClick={(e) => handleLinkClick(e, link.href)}
-                className="text-primary-deep hover:text-primary-green font-sans font-semibold text-sm transition-colors duration-200"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
+          {/* Desktop Nav Links (3D Adaptive Navigation Pill) */}
+          <div className="hidden md:block">
+            <PillBase />
+          </div>
 
           {/* CTA Sticky Button & Language Switcher */}
           <div className="hidden md:flex items-center gap-4">
