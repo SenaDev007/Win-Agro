@@ -15,6 +15,7 @@ interface NavItem {
 export const PillBase: React.FC = () => {
   const [activeSection, setActiveSection] = useState('hero')
   const [expanded, setExpanded] = useState(false)
+  const [isAutoExpanded, setIsAutoExpanded] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -33,10 +34,13 @@ export const PillBase: React.FC = () => {
   const pillWidth = useSpring(140, { stiffness: 220, damping: 25, mass: 1 })
   const pillShift = useSpring(0, { stiffness: 220, damping: 25, mass: 1 })
 
+  const isPillExpanded = expanded || isAutoExpanded
+
   // Handle hover expansion
   useEffect(() => {
     if (hovering) {
       setExpanded(true)
+      setIsAutoExpanded(false)
       pillWidth.set(620) // Slightly wider to hold 5 items cleanly
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
@@ -44,7 +48,9 @@ export const PillBase: React.FC = () => {
     } else {
       hoverTimeoutRef.current = setTimeout(() => {
         setExpanded(false)
-        pillWidth.set(140)
+        if (!isAutoExpanded) {
+          pillWidth.set(140)
+        }
       }, 600)
     }
 
@@ -53,6 +59,26 @@ export const PillBase: React.FC = () => {
         clearTimeout(hoverTimeoutRef.current)
       }
     }
+  }, [hovering, pillWidth, isAutoExpanded])
+
+  // Handle periodic auto-expansion every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!hovering) {
+        setIsAutoExpanded(true)
+        pillWidth.set(620)
+        
+        // Collapse after 3 seconds
+        setTimeout(() => {
+          setIsAutoExpanded(false)
+          if (!hovering) {
+            pillWidth.set(140)
+          }
+        }, 3000)
+      }
+    }, 15000)
+
+    return () => clearInterval(interval)
   }, [hovering, pillWidth])
 
   const handleMouseEnter = () => {
@@ -71,6 +97,7 @@ export const PillBase: React.FC = () => {
     
     // Collapse the pill after selection
     setHovering(false)
+    setIsAutoExpanded(false)
     
     // Smooth scroll to the section
     const targetElement = document.querySelector(`#${sectionId}`);
@@ -112,7 +139,7 @@ export const PillBase: React.FC = () => {
             #076B37 100%
           )
         `,
-        boxShadow: expanded
+        boxShadow: isPillExpanded
           ? `
             0 2px 4px rgba(0, 0, 0, 0.12),
             0 6px 12px rgba(7, 107, 55, 0.2),
@@ -183,9 +210,9 @@ export const PillBase: React.FC = () => {
       <div 
         className="absolute rounded-full pointer-events-none"
         style={{
-          left: expanded ? '18%' : '15%',
+          left: isPillExpanded ? '18%' : '15%',
           top: '16%',
-          width: expanded ? '140px' : '60px',
+          width: isPillExpanded ? '140px' : '60px',
           height: '14px',
           background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.18) 40%, rgba(255, 255, 255, 0.05) 70%, rgba(255, 255, 255, 0) 100%)',
           filter: 'blur(4px)',
@@ -195,7 +222,7 @@ export const PillBase: React.FC = () => {
       />
       
       {/* Secondary gloss accent - only show when expanded */}
-      {expanded && (
+      {isPillExpanded && (
         <div 
           className="absolute rounded-full pointer-events-none"
           style={{
@@ -211,7 +238,7 @@ export const PillBase: React.FC = () => {
       )}
       
       {/* Left edge illumination - only show when expanded */}
-      {expanded && (
+      {isPillExpanded && (
         <div 
           className="absolute inset-y-0 left-0 rounded-l-full pointer-events-none"
           style={{
@@ -222,7 +249,7 @@ export const PillBase: React.FC = () => {
       )}
       
       {/* Right edge shadow - only show when expanded */}
-      {expanded && (
+      {isPillExpanded && (
         <div 
           className="absolute inset-y-0 right-0 rounded-r-full pointer-events-none"
           style={{
@@ -277,7 +304,7 @@ export const PillBase: React.FC = () => {
         }}
       >
         {/* Collapsed state - show only active section with smooth text transitions */}
-        {!expanded && (
+        {!isPillExpanded && (
           <div className="flex items-center relative">
             <AnimatePresence mode="wait">
               {activeItem && (
@@ -314,7 +341,7 @@ export const PillBase: React.FC = () => {
         )}
 
         {/* Expanded state - show all sections with stagger */}
-        {expanded && (
+        {isPillExpanded && (
           <div className="flex items-center justify-evenly w-full gap-2">
             {navItems.map((item, index) => {
               const isActive = item.id === activeSection

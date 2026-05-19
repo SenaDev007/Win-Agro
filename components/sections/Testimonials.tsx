@@ -100,6 +100,10 @@ export default function Testimonials() {
 
   const currentTestimonials = language === "en" ? testimonialsEN : testimonialsFR;
 
+  // Split to prevent cards duplication between the two scrolling carousels
+  const firstRow = currentTestimonials.filter((_, index) => index % 2 === 0);
+  const secondRow = currentTestimonials.filter((_, index) => index % 2 !== 0);
+
   return (
     <section id="témoignages" className="py-24 bg-[#FAFAF3] relative overflow-hidden">
       <div className="absolute inset-0 bg-grain opacity-[0.03] pointer-events-none" />
@@ -136,13 +140,13 @@ export default function Testimonials() {
       {/* Dual Infinite Scrolling Carousels */}
       <div className="space-y-6 w-full relative z-10 select-none pointer-events-auto">
         <TestimonialsCarousel
-          testimonials={currentTestimonials}
+          testimonials={firstRow}
           speed={28}
           direction="left"
           cardHeight={210}
         />
         <TestimonialsCarousel
-          testimonials={currentTestimonials}
+          testimonials={secondRow}
           speed={34}
           direction="right"
           cardHeight={210}

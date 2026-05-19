@@ -21,6 +21,7 @@ export default function LeadForm({ selectedService }: LeadFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
     reset,
   } = useForm<LeadFormData>({
@@ -32,6 +33,14 @@ export default function LeadForm({ selectedService }: LeadFormProps) {
       message: "",
     },
   });
+
+  const watchedService = watch("service");
+  const currentService = watchedService || (selectedService as LeadFormData["service"]) || "formation_elevage";
+  const selectedLabel = serviceLabels[currentService] || "Formation élevage";
+  const directMessage = encodeURIComponent(
+    `Bonjour Victoire, je souhaite me renseigner concernant votre service : ${selectedLabel}.`
+  );
+  const directWhatsappUrl = `https://wa.me/2290161336548?text=${directMessage}`;
 
   // Keep dropdown value synchronized with parent selections from Services cards
   useEffect(() => {
@@ -128,7 +137,7 @@ Mon numéro : ${data.phone}`;
                     WhatsApp principal (Victoire)
                   </p>
                   <a
-                    href="https://wa.me/2290161336548"
+                    href={directWhatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-base sm:text-lg font-bold text-primary-deep hover:text-primary-green transition-colors font-sans"
@@ -159,10 +168,10 @@ Mon numéro : ${data.phone}`;
             {/* Direct WhatsApp Action Button */}
             <div className="pt-4">
               <motion.a
-                href="https://wa.me/2290161336548"
+                href={directWhatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(9, 137, 71, 0.3)" }}
+                whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(9, 137, 71, 0.4)" }}
                 whileTap={{ scale: 0.98 }}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-primary-green hover:bg-primary-deep text-white font-sans font-bold text-base shadow-md cursor-pointer btn-shimmer"
               >

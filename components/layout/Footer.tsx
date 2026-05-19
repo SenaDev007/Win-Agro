@@ -34,7 +34,7 @@ export default function Footer() {
               onClick={(e) => handleLinkClick(e, "#hero")}
               className="inline-flex items-center gap-3 focus:outline-none"
             >
-              <div className="relative w-16 h-16 overflow-hidden rounded-full border border-primary-green/30 bg-white flex items-center justify-center p-0.5 shadow-md">
+              <div className="relative w-16 h-16 overflow-hidden rounded-full border border-primary-green/30 bg-noir-vert flex items-center justify-center p-0.5 shadow-md">
                 <Image
                   src="/favicon-for-app/icon0.svg"
                   alt="Win Agro Logo"
@@ -181,7 +181,7 @@ export default function Footer() {
                 </p>
                 <div className="flex items-center gap-4">
                   <a
-                    href="https://wa.me/2290161336548"
+                    href={`https://wa.me/2290161336548?text=${encodeURIComponent("Bonjour Victoire, je viens de visiter votre site Win Agro et j'aimerais en savoir plus sur vos services et produits d'élevage.")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full bg-primary-green/20 hover:bg-primary-green text-white hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110"

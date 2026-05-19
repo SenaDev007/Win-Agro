@@ -26,20 +26,35 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
   cardHeight = 220,
   className,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [carouselWidth, setCarouselWidth] = useState(0);
 
   useEffect(() => {
-    if (containerRef.current) {
-      setCarouselWidth(containerRef.current.scrollWidth / 2);
-    }
+    const handleResize = () => {
+      if (innerRef.current) {
+        setCarouselWidth(innerRef.current.scrollWidth / 3);
+      }
+    };
+
+    // Run initial measure
+    handleResize();
+
+    // Set a small timeout to ensure DOM layout has fully settled
+    const timer = setTimeout(handleResize, 100);
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
   }, [testimonials]);
 
-  const loopTestimonials = [...testimonials, ...testimonials];
+  const loopTestimonials = [...testimonials, ...testimonials, ...testimonials];
 
   return (
-    <div className={`overflow-hidden w-full ${className}`} ref={containerRef}>
+    <div className={`overflow-hidden w-full ${className}`}>
       <motion.div
+        ref={innerRef}
         animate={{
           x:
             direction === "left"

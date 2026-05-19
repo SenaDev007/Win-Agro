@@ -32,7 +32,7 @@ const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const data = {
   facebookLink: 'https://www.facebook.com/profile.php?id=100063562046259',
-  whatsappLink: 'https://wa.me/2290161336548',
+  whatsappLink: 'https://wa.me/2290161336548?text=' + encodeURIComponent("Bonjour Victoire, je viens de visiter votre site Win Agro et j'aimerais en savoir plus sur vos services et produits d'élevage."),
   linkedinLink: 'https://linkedin.com',
   services: {
     formation: '#services',
@@ -49,7 +49,7 @@ const data = {
   help: {
     faqs: '#contact',
     support: '#contact',
-    chat: 'https://wa.me/2290161336548',
+    chat: 'https://wa.me/2290161336548?text=' + encodeURIComponent("Bonjour Victoire, j'ai une question concernant les formations ou installations de ferme Win Agro."),
   },
   contact: {
     email: 'contact@winagro.bj',
@@ -126,7 +126,7 @@ export default function Footer4Col() {
           {/* Column 1: Company Profile */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-white logo-light-beam shadow-md flex items-center justify-center p-0.5">
+              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-noir-vert logo-light-beam shadow-md flex items-center justify-center p-0.5">
                 <img
                   src={data.company.logo || '/placeholder.svg'}
                   alt="Win Agro Logo"
