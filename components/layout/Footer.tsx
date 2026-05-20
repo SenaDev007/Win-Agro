@@ -34,7 +34,7 @@ export default function Footer() {
               onClick={(e) => handleLinkClick(e, "#hero")}
               className="inline-flex items-center gap-3 focus:outline-none"
             >
-              <div className="relative w-16 h-16 overflow-hidden rounded-full border border-primary-green/30 bg-[#076B37] flex items-center justify-center p-0.5 shadow-md">
+              <div className="relative w-16 h-16 overflow-hidden rounded-full border border-primary-green/30 bg-noir-vert flex items-center justify-center p-0.5 shadow-md">
                 <Image
                   src="/favicon-for-app/icon0.svg"
                   alt="Win Agro Logo"

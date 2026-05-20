@@ -126,7 +126,7 @@ export default function Footer4Col() {
           {/* Column 1: Company Profile */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-[#076B37] logo-light-beam shadow-md flex items-center justify-center p-0.5">
+              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-noir-vert logo-light-beam shadow-md flex items-center justify-center p-0.5">
                 <img
                   src={data.company.logo || '/placeholder.svg'}
                   alt="Win Agro Logo"
