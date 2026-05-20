@@ -227,25 +227,6 @@ export default function RootLayout({
           {children}
         </LanguageProvider>
 
-        {/* Hidden Google Translate Widget */}
-        <div id="google_translate_element" className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" />
-        
-        <Script id="google-translate-config" strategy="afterInteractive">
-          {`
-            function googleTranslateElementInit() {
-              new google.translate.TranslateElement({
-                pageLanguage: 'fr',
-                includedLanguages: 'fr,en',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-              }, 'google_translate_element');
-            }
-          `}
-        </Script>
-        <Script
-          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-          strategy="afterInteractive"
-        />
 
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-M7812XKKW1"
