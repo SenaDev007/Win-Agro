@@ -126,7 +126,7 @@ export default function Footer4Col() {
           {/* Column 1: Company Profile */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-noir-vert logo-light-beam shadow-md flex items-center justify-center p-0.5">
+              <div className="relative w-16 h-16 rounded-full overflow-hidden border border-primary-green/30 bg-[#076B37] logo-light-beam shadow-md flex items-center justify-center p-0.5">
                 <img
                   src={data.company.logo || '/placeholder.svg'}
                   alt="Win Agro Logo"
@@ -288,7 +288,7 @@ export default function Footer4Col() {
             <p className="text-xs text-gray-500 mt-4 sm:mt-0 font-sans flex gap-2 justify-center sm:justify-end">
               <span>Conçu avec excellence par</span>
               <a
-                href="https://ketermarketing.com"
+                href="https://keter-marketing-itan.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent-yellow hover:underline font-bold flex items-center gap-0.5"

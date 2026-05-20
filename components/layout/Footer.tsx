@@ -224,7 +224,7 @@ export default function Footer() {
           <p className="font-sans flex gap-2">
             <span>Conçu avec excellence par</span>
             <a
-              href="https://ketermarketing.com"
+              href="https://keter-marketing-itan.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-yellow hover:underline font-bold"
