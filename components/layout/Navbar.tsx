@@ -89,7 +89,7 @@ export default function Navbar() {
 
           {/* CTA Sticky Button & Language Switcher */}
           <div className="hidden md:flex items-center gap-4">
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> */}
             <motion.a
               href="#contact"
               onClick={(e) => handleLinkClick(e, "#contact")}
@@ -113,7 +113,7 @@ export default function Navbar() {
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-3">
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               type="button"
