@@ -204,20 +204,33 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
             <div className="relative w-full max-w-lg bg-[#FAFAF3] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
 
               {/* Header */}
-              <div className="bg-noir-vert px-6 pt-6 pb-5 relative shrink-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+              <div 
+                className={`px-6 pt-6 pb-5 relative shrink-0 ${step === 'form' ? 'bg-cover bg-center overflow-hidden' : 'bg-noir-vert'}`}
+                style={step === 'form' ? { 
+                  backgroundImage: path === 'accompagnement' 
+                    ? 'url("/victoire_terrain.jpg")' 
+                    : 'url("/ferme_moderne.png")' 
+                } : {}}
+              >
+                {step === 'form' && <div className="absolute inset-0 bg-noir-vert/80 z-0 backdrop-blur-sm" />}
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center gap-3">
                     {step === "form" && (
-                      <button onClick={handleBack} className="mr-1 text-white/70 hover:text-white transition-colors">
+                      <button onClick={handleBack} className="mr-1 text-white/70 hover:text-white transition-colors shrink-0">
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                     )}
+                    
+                    <div className="w-10 h-10 shrink-0 bg-white rounded-lg p-0.5 shadow-sm overflow-hidden flex items-center justify-center">
+                      <img src="/Logo Win Agro.png" alt="Win Agro" className="w-full h-full object-contain" />
+                    </div>
+
                     <div>
                       <p className="text-accent-yellow text-[10px] font-sans font-black uppercase tracking-widest">Win Agro Agri Tech Solutions</p>
                       <h2 className="text-white font-serif text-lg font-bold leading-tight mt-0.5">
                         {step === "choice" && "Comment pouvons-nous vous aider ?"}
                         {step === "form" && path === "accompagnement" && "Votre projet d'élevage"}
-                        {step === "form" && path === "formation" && "Inscription à une formation"}
+                        {step === "form" && path === "formation" && "Inscription à la formation"}
                         {step === "success" && "Demande envoyée ! 🎉"}
                       </h2>
                     </div>
@@ -313,9 +326,13 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                         {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours...</> : "Envoyer ma demande →"}
                       </button>
 
-                      <p className="text-[10px] text-gray-400 font-sans text-center">
-                        Vos informations sont confidentielles. Un conseiller Win Agro vous contactera dans les 24h.
-                      </p>
+                      <div className="pt-4 mt-2 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
+                        <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
+                        <p className="text-sm font-serif font-bold text-primary-deep">L'équipe Win Agro</p>
+                        <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
+                          Vos informations sont confidentielles. Un conseiller technique vous contactera dans les 24h.
+                        </p>
+                      </div>
                     </motion.form>
                   )}
 
