@@ -208,8 +208,8 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                 className={`px-6 pt-6 pb-5 relative shrink-0 ${step === 'form' ? 'bg-cover bg-center overflow-hidden' : 'bg-noir-vert'}`}
                 style={step === 'form' ? { 
                   backgroundImage: path === 'accompagnement' 
-                    ? 'url("https://images.unsplash.com/photo-1591793433098-92dc8d0e9c05?auto=format&fit=crop&w=900&q=80")' 
-                    : 'url("https://images.unsplash.com/photo-1628352081506-83c43123c5bc?auto=format&fit=crop&w=900&q=80")' 
+                    ? 'url("/lead_accompagnement.png")' 
+                    : 'url("/lead_formation.png")' 
                 } : {}}
               >
                 {step === 'form' && <div className="absolute inset-0 bg-noir-vert/80 z-0 backdrop-blur-sm" />}
