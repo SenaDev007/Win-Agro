@@ -10,35 +10,35 @@ export default function WhyUs() {
       tag: "TERRAIN & RÉALITÉ LOCALE",
       title: "Expertise terrain béninoise",
       description: "On ne t'applique pas des méthodes importées d'Europe déconnectées de nos réalités. On travaille en s'adaptant à notre climat, aux intrants disponibles localement et à nos marchés. Ce qu'on t'enseigne fonctionne vraiment ici.",
-      image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=800&auto=format&fit=crop&q=80",
+      image: "/features/benin_farm_terrain.png",
     },
     {
       num: "02",
       tag: "FINANCES & RENTABILITÉ",
       title: "Résultats réels et mesurables",
       description: "Nos éleveurs partenaires voient des résultats financiers et sanitaires concrets : un taux de survie de leurs bandes nettement amélioré, des coûts d'alimentation maîtrisés et des fermes rentables dès les premiers cycles.",
-      image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=800&auto=format&fit=crop&q=80",
+      image: "/features/benin_farm_growth.png",
     },
     {
       num: "03",
       tag: "SERVICE APRÈS-VENTE VIA WHATSAPP",
       title: "Présence active après la vente",
       description: "Tu n'es pas seul une fois ton chèque signé ou ta formation validée. Victoire et ses équipes restent joignables. On passe visiter les installations, on suit ta progression sur WhatsApp et on intervient physiquement en cas de doute.",
-      image: "https://images.unsplash.com/photo-1589923188900-85dae440342b?w=800&auto=format&fit=crop&q=80",
+      image: "/features/benin_farmer_whatsapp.png",
     },
     {
       num: "04",
       tag: "DURABILITÉ & SANTÉ",
       title: "Vision biologique et durable",
       description: "Zéro intrant chimique. Nous privilégions des méthodes prophylactiques saines et biologiques pour tes animaux, pour ta santé, et pour préserver la fertilité de nos sols. C'est une conviction profonde, pas du simple affichage écologique.",
-      image: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?w=800&auto=format&fit=crop&q=80",
+      image: "/features/benin_farm_poultry.png",
     },
     {
       num: "05",
       tag: "PARTENARIATS INTERNATIONAUX",
       title: "Réseau Afrique & Europe",
       description: "Un écosystème d'entraide agricole en construction qui grandit chaque mois. Nous connectons nos porteurs de projets à des opportunités de distribution, de financement et de conseils techniques par-delà nos frontières.",
-      image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80",
+      image: "/features/benin_farm_partnership.png",
     },
   ];
 
@@ -82,7 +82,7 @@ export default function WhyUs() {
           >
             "Beaucoup de prestataires t'accompagnent jusqu'à la vente.{" "}
             <span className="relative inline-block text-primary-green">
-              Nous, on t'accompagnent jusqu'aux résultats.
+              Nous, on t'accompagne jusqu'aux résultats.
               <motion.span
                 animate={{ scaleX: [0, 1, 1, 0], transformOrigin: ["0% 50%", "0% 50%", "100% 50%", "100% 50%"] }}
                 transition={{ duration: 3, repeat: Infinity, times: [0, 0.15, 0.85, 1], ease: "easeInOut" }}
