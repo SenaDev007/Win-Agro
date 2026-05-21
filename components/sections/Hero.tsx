@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sprout, ArrowRight } from "lucide-react";
+import LeadModal from "@/components/ui/LeadModal";
 
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -30,10 +32,11 @@ export default function Hero() {
   };
 
   return (
-    <section
-      id="hero"
-      className="relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden bg-primary-deep text-white"
-    >
+    <>
+      <section
+        id="hero"
+        className="relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden bg-primary-deep text-white"
+      >
       {/* 1. Premium Background Video with Green Opacity Overlay */}
       <div className="absolute inset-0 z-0">
         <video
@@ -146,7 +149,7 @@ export default function Hero() {
             className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full sm:w-auto"
           >
             <motion.button
-              onClick={() => handleScroll("#contact")}
+              onClick={() => setIsModalOpen(true)}
               whileHover={{ scale: 1.05, boxShadow: "0px 10px 25px rgba(9, 137, 71, 0.4)" }}
               whileTap={{ scale: 0.98 }}
               animate={{
@@ -187,5 +190,8 @@ export default function Hero() {
       {/* Elegant Slanted Section Divider */}
       <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FAFAF3]" style={{ clipPath: "polygon(0 100%, 100% 100%, 100% 0)" }} />
     </section>
+
+    <LeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 }
