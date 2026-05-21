@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, Loader2, CheckCircle2, Sprout, BookOpen } from "lucide-react";
+import { X, ChevronLeft, Loader2, CheckCircle2, Sprout, BookOpen, Stethoscope } from "lucide-react";
 
-type Path = null | "accompagnement" | "formation";
+type Path = null | "accompagnement" | "formation" | "consultation";
 type Step = "choice" | "form" | "success";
 
 interface FormData {
@@ -21,18 +21,24 @@ interface FormData {
   formationSouhaitee: string;
   modePreferee: string;
   disponibilite: string;
+  // consultation
+  typeElevageActuel: string;
+  problemePrincipal: string;
+  depuisCombienDeTemps: string;
+  urgence: string;
 }
 
 const initialForm: FormData = {
   prenom: "", nom: "", whatsapp: "", ville: "",
   typeElevage: "", experience: "", besoin: "", budget: "",
   formationSouhaitee: "", modePreferee: "", disponibilite: "",
+  typeElevageActuel: "", problemePrincipal: "", depuisCombienDeTemps: "", urgence: "",
 };
 
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialPath?: "accompagnement" | "formation" | null;
+  initialPath?: "accompagnement" | "formation" | "consultation" | null;
 }
 
 const Select = ({ label, name, value, onChange, options, required }: {
@@ -73,6 +79,18 @@ const Input = ({ label, name, value, onChange, type = "text", placeholder, requi
     />
   </div>
 );
+
+const heroBg: Record<NonNullable<Path>, string> = {
+  accompagnement: 'url("/lead_accompagnement.png")',
+  formation: 'url("/lead_formation.png")',
+  consultation: 'url("/lead_consultation.png")',
+};
+
+const heroTitle: Record<NonNullable<Path>, string> = {
+  accompagnement: "Votre projet d'élevage",
+  formation: "Inscription à la formation",
+  consultation: "Consultation & Diagnostic",
+};
 
 export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadModalProps) {
   const [path, setPath] = useState<Path>(initialPath);
@@ -123,9 +141,14 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
   };
 
   const handleBack = () => {
-    setStep("choice");
-    setPath(null);
-    setError("");
+    // If initialPath is set, we can't go back to choice (modal was opened directly)
+    if (initialPath) {
+      onClose();
+    } else {
+      setStep("choice");
+      setPath(null);
+      setError("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,23 +156,29 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
     setError("");
     setLoading(true);
     try {
-      const payload = {
-        type: path,
-        prenom: form.prenom,
-        nom: form.nom,
-        whatsapp: form.whatsapp,
-        ville: form.ville,
-        ...(path === "accompagnement" ? {
-          typeElevage: form.typeElevage,
-          experience: form.experience,
-          besoin: form.besoin,
-          budget: form.budget,
-        } : {
-          formationSouhaitee: form.formationSouhaitee,
-          modePreferee: form.modePreferee,
-          disponibilite: form.disponibilite,
-        }),
-      };
+      let payload: Record<string, string>;
+
+      if (path === "accompagnement") {
+        payload = {
+          type: path,
+          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
+          typeElevage: form.typeElevage, experience: form.experience, besoin: form.besoin, budget: form.budget,
+        };
+      } else if (path === "formation") {
+        payload = {
+          type: path,
+          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
+          formationSouhaitee: form.formationSouhaitee, modePreferee: form.modePreferee, disponibilite: form.disponibilite,
+        };
+      } else {
+        payload = {
+          type: "consultation",
+          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
+          typeElevageActuel: form.typeElevageActuel, problemePrincipal: form.problemePrincipal,
+          depuisCombienDeTemps: form.depuisCombienDeTemps, urgence: form.urgence,
+        };
+      }
+
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,7 +193,6 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
       const url = result.data?.whatsappUrl;
       if (url) {
         setWhatsappUrl(url);
-        // Auto-redirect to WhatsApp after 1.5 seconds
         setTimeout(() => {
           window.open(url, "_blank", "noopener,noreferrer");
         }, 1500);
@@ -204,13 +232,9 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
             <div className="relative w-full max-w-lg bg-[#FAFAF3] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
 
               {/* Header */}
-              <div 
+              <div
                 className={`px-6 pt-6 pb-5 relative shrink-0 ${step === 'form' ? 'bg-cover bg-center overflow-hidden' : 'bg-noir-vert'}`}
-                style={step === 'form' ? { 
-                  backgroundImage: path === 'accompagnement' 
-                    ? 'url("/lead_accompagnement.png")' 
-                    : 'url("/lead_formation.png")' 
-                } : {}}
+                style={step === 'form' && path ? { backgroundImage: heroBg[path] } : {}}
               >
                 {step === 'form' && <div className="absolute inset-0 bg-noir-vert/80 z-0 backdrop-blur-sm" />}
                 <div className="flex items-center justify-between relative z-10">
@@ -220,7 +244,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                     )}
-                    
+
                     <div className="w-10 h-10 shrink-0 bg-white rounded-lg p-0.5 shadow-sm overflow-hidden flex items-center justify-center">
                       <img src="/Logo Win Agro.png" alt="Win Agro" className="w-full h-full object-contain" />
                     </div>
@@ -229,8 +253,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                       <p className="text-accent-yellow text-[10px] font-sans font-black uppercase tracking-widest">Win Agro Agri Tech Solutions</p>
                       <h2 className="text-white font-serif text-lg font-bold leading-tight mt-0.5">
                         {step === "choice" && "Comment pouvons-nous vous aider ?"}
-                        {step === "form" && path === "accompagnement" && "Votre projet d'élevage"}
-                        {step === "form" && path === "formation" && "Inscription à la formation"}
+                        {step === "form" && path && heroTitle[path]}
                         {step === "success" && "Demande envoyée ! 🎉"}
                       </h2>
                     </div>
@@ -279,6 +302,19 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                           <p className="text-xs text-gray-500 font-sans mt-1">Volailles, lapins, porcs, nutrition animale, transformation</p>
                         </div>
                       </button>
+
+                      <button
+                        onClick={() => handleChoose("consultation")}
+                        className="group w-full flex items-start gap-4 p-5 rounded-2xl border-2 border-primary-green/20 hover:border-primary-green bg-white hover:bg-primary-pale transition-all duration-200 text-left"
+                      >
+                        <div className="w-12 h-12 rounded-xl bg-red-50 group-hover:bg-red-100 flex items-center justify-center shrink-0 transition-colors">
+                          <Stethoscope className="w-6 h-6 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="font-serif font-bold text-primary-deep text-base">Je veux un diagnostic de ma ferme</p>
+                          <p className="text-xs text-gray-500 font-sans mt-1">Audit, résolution de problèmes, optimisation des performances</p>
+                        </div>
+                      </button>
                     </motion.div>
                   )}
 
@@ -316,6 +352,21 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                           options={["En semaine", "Le weekend", "Flexible"]} />
                       </>)}
 
+                      {/* Consultation fields */}
+                      {path === "consultation" && (<>
+                        <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-xs text-red-700 font-sans">
+                          🔍 Victoire analysera votre situation et vous proposera un plan d'action personnalisé.
+                        </div>
+                        <Select label="Type d'élevage actuel" name="typeElevageActuel" value={form.typeElevageActuel} onChange={handleChange} required
+                          options={["Volailles (chair / pondeuses)", "Pintades / Cailles", "Lapins", "Porcs", "Élevage mixte", "Autre"]} />
+                        <Select label="Problème principal constaté" name="problemePrincipal" value={form.problemePrincipal} onChange={handleChange} required
+                          options={["Mortalité élevée", "Faible productivité / croissance lente", "Maladies récurrentes", "Alimentation inadaptée", "Rentabilité insuffisante", "Autre"]} />
+                        <Select label="Depuis combien de temps ?" name="depuisCombienDeTemps" value={form.depuisCombienDeTemps} onChange={handleChange} required
+                          options={["Moins d'1 mois", "1 à 3 mois", "Plus de 3 mois"]} />
+                        <Select label="Niveau d'urgence" name="urgence" value={form.urgence} onChange={handleChange} required
+                          options={["Urgent — cette semaine", "Dans le mois", "Pas encore urgent"]} />
+                      </>)}
+
                       {error && <p className="text-red-500 text-xs font-sans bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
                       <button
@@ -348,7 +399,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                           {whatsappUrl ? (
                             <>Votre demande a été enregistrée avec succès ! Redirection automatique vers WhatsApp en cours...</>
                           ) : (
-                            <>Votre demande a bien été reçue. Un conseiller Win Agro vous contactera sur WhatsApp dans les prochaines 24h pour la suite de votre projet agricole.</>
+                            <>Votre demande a bien été reçue. Un conseiller Win Agro vous contactera sur WhatsApp dans les prochaines 24h.</>
                           )}
                         </p>
                       </div>

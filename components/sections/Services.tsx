@@ -11,7 +11,7 @@ interface ServicesProps {
 
 export default function Services({ onSelectService }: ServicesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalPath, setModalPath] = useState<"accompagnement" | "formation" | null>(null);
+  const [modalPath, setModalPath] = useState<"accompagnement" | "formation" | "consultation" | null>(null);
 
   const handleServiceClick = (serviceKey: string) => {
     // 1. Trigger service selection state for compatibility with bottom form
@@ -20,6 +20,8 @@ export default function Services({ onSelectService }: ServicesProps) {
     // 2. Open the LeadModal with adapted path
     if (serviceKey === "formation_elevage") {
       setModalPath("formation");
+    } else if (serviceKey === "consultation") {
+      setModalPath("consultation");
     } else {
       setModalPath("accompagnement");
     }

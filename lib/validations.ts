@@ -88,12 +88,40 @@ export const formationSchema = z.object({
   disponibilite: z.string().min(1, { message: "La disponibilité est requise." }),
 });
 
+export const consultationSchema = z.object({
+  type: z.literal("consultation"),
+  prenom: z
+    .string()
+    .min(2, { message: "Le prénom doit faire au moins 2 caractères." })
+    .max(50),
+  nom: z
+    .string()
+    .min(2, { message: "Le nom doit faire au moins 2 caractères." })
+    .max(50),
+  whatsapp: z
+    .string()
+    .min(8, { message: "Le numéro WhatsApp doit faire au moins 8 caractères." })
+    .regex(/^[+]?[0-9\s-]{8,20}$/, {
+      message: "Vérifie ce numéro — il doit contenir uniquement des chiffres et d'éventuels indicatifs (ex: +229).",
+    }),
+  ville: z
+    .string()
+    .min(2, { message: "La ville est requise." })
+    .max(100),
+  typeElevageActuel: z.string().min(1, { message: "Le type d'élevage est requis." }),
+  problemePrincipal: z.string().min(1, { message: "Le problème principal est requis." }),
+  depuisCombienDeTemps: z.string().min(1, { message: "La durée est requise." }),
+  urgence: z.string().min(1, { message: "L'urgence est requise." }),
+});
+
 export const modalLeadSchema = z.discriminatedUnion("type", [
   accompagnementSchema,
   formationSchema,
+  consultationSchema,
 ]);
 
 export type AccompagnementData = z.infer<typeof accompagnementSchema>;
 export type FormationData = z.infer<typeof formationSchema>;
+export type ConsultationData = z.infer<typeof consultationSchema>;
 export type ModalLeadData = z.infer<typeof modalLeadSchema>;
 

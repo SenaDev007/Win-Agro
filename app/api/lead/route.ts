@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
       const data = validation.data;
       const { prenom, nom, whatsapp, ville, type } = data;
-      const typeLabel = type === "accompagnement" ? "Accompagnement Projet" : "Inscription Formation";
+      const typeLabel = type === "accompagnement" ? "Accompagnement Projet" : type === "formation" ? "Inscription Formation" : "Consultation & Diagnostic";
 
       console.log(`🌱 Lead reçu de type [${typeLabel}] :`, { prenom, nom, whatsapp, ville });
 
@@ -69,6 +69,41 @@ Voici mes informations :
 - Mon budget : ${budget || "Non spécifié"}
 - Localisation : ${ville}
 - WhatsApp : ${whatsapp}`;
+      } else if (type === "consultation") {
+        const { typeElevageActuel, problemePrincipal, depuisCombienDeTemps, urgence } = data;
+        emailSubject = `🔍 Consultation & Diagnostic — ${prenom} ${nom}`;
+        htmlDetails = `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Type d'élevage actuel</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${typeElevageActuel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Problème principal</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${problemePrincipal}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Depuis combien de temps</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${depuisCombienDeTemps}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Urgence</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; color: #dc2626; font-weight: bold;">${urgence}</td>
+          </tr>
+        `;
+
+        whatsappMessage = `Bonjour Victoire,
+
+Je m'appelle ${prenom} ${nom}. Je souhaite une consultation et un diagnostic de ma ferme.
+
+Voici ma situation :
+- Type d'élevage : ${typeElevageActuel}
+- Problème principal : ${problemePrincipal}
+- Depuis : ${depuisCombienDeTemps}
+- Urgence : ${urgence}
+- Localisation : ${ville}
+- WhatsApp : ${whatsapp}
+
+J'attends votre contact pour la suite. Merci !`;
       } else {
         const { formationSouhaitee, modePreferee, disponibilite } = data;
         emailSubject = `📚 Inscription Formation [${formationSouhaitee}] — ${prenom} ${nom}`;
