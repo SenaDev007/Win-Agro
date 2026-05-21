@@ -2,13 +2,10 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { useLanguage } from "@/context/LanguageContext";
 import { TestimonialsCarousel, Testimonial } from "@/components/ui/testimonials-carousel";
 
 export default function Testimonials() {
-  const { language } = useLanguage();
-
-  const testimonialsFR: Testimonial[] = [
+  const testimonials: Testimonial[] = [
     {
       text: "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.",
       highlight: "Mon taux de mortalité est passé de 30% à 8%",
@@ -53,56 +50,9 @@ export default function Testimonials() {
     }
   ];
 
-  const testimonialsEN: Testimonial[] = [
-    {
-      text: "My mortality rate dropped from 30% to 8% in just two cycles. I was losing nearly a third of my day-old chicks. Victoire diagnosed a coop ventilation issue and adjusted my feed formulas.",
-      highlight: "My mortality rate dropped from 30% to 8%",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Kofi A.",
-      role: "Poultry Farmer · Parakou, Benin",
-    },
-    {
-      text: "I went from an idea to a profitable farm of 1,000 layers in 3 months. I had the will to build it, but was terrified of failing. Win Agro handled feasibility studies, plans, and full setup.",
-      highlight: "profitable farm of 1,000 layers in 3 months",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Chantal M.",
-      role: "Entrepreneur · Ouidah, Benin",
-    },
-    {
-      text: "An overall productivity increase of 25% on my livestock. My rabbits had small litters and slow growth. Victoire completely revised our natural prevention plan and local green forage.",
-      highlight: "overall productivity increase of 25%",
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Mathieu S.",
-      role: "Rabbit Breeder · Bohicon, Benin",
-    },
-    {
-      text: "My crop yields doubled thanks to selected seeds and the economic drip irrigation system designed by Win Agro. Results were visible from the first month.",
-      highlight: "My crop yields doubled",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Adama B.",
-      role: "Vegetable Farmer · Malanville, Benin",
-    },
-    {
-      text: "Thanks to Win Agro's online training, I launched my guinea fowl breeding from home. Startup was easy, and the survival rate is excellent with their follow-up.",
-      highlight: "easy startup and excellent survival rate",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Amina T.",
-      role: "Poultry Breeder · Djougou, Benin",
-    },
-    {
-      text: "I save 30% on feed costs for my animals by formulating my own feed using natural methods learned in Win Agro's practical workshops.",
-      highlight: "I save 30% on feed costs",
-      image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Fabrice K.",
-      role: "Feed Producer · Calavi, Benin",
-    }
-  ];
-
-  const currentTestimonials = language === "en" ? testimonialsEN : testimonialsFR;
-
   // Split to prevent cards duplication between the two scrolling carousels
-  const firstRow = currentTestimonials.filter((_, index) => index % 2 === 0);
-  const secondRow = currentTestimonials.filter((_, index) => index % 2 !== 0);
+  const firstRow = testimonials.filter((_, index) => index % 2 === 0);
+  const secondRow = testimonials.filter((_, index) => index % 2 !== 0);
 
   return (
     <section id="témoignages" className="py-24 bg-[#FAFAF3] relative overflow-hidden">
@@ -112,7 +62,7 @@ export default function Testimonials() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-block px-3 py-1 rounded-full bg-primary-pale text-primary-deep text-xs font-sans font-bold uppercase tracking-wider mb-4 border border-primary-green/10">
-            {language === "en" ? "Real Testimonials" : "Témoignages Réels"}
+            Témoignages Réels
           </div>
           
           <motion.h2
@@ -122,11 +72,11 @@ export default function Testimonials() {
             transition={{ duration: 0.6 }}
             className="font-serif text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary-deep leading-tight"
           >
-            {language === "en" ? "They started just like you." : "Ils ont démarré comme toi."}
+            Ils ont démarré comme toi.
           </motion.h2>
           
           <p className="text-primary-green font-serif text-lg sm:text-xl font-bold mt-2">
-            {language === "en" ? "Here is what they achieved with Win Agro." : "Voilà ce qu'ils ont obtenu avec Win Agro."}
+            Voilà ce qu'ils ont obtenu avec Win Agro.
           </p>
           
           <motion.div

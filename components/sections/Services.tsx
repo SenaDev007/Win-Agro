@@ -1,30 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Crown, Info } from "lucide-react";
+import LeadModal from "@/components/ui/LeadModal";
 
 interface ServicesProps {
   onSelectService: (serviceKey: string) => void;
 }
 
 export default function Services({ onSelectService }: ServicesProps) {
-  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalPath, setModalPath] = useState<"accompagnement" | "formation" | null>(null);
+
   const handleServiceClick = (serviceKey: string) => {
-    // 1. Trigger service selection state
+    // 1. Trigger service selection state for compatibility with bottom form
     onSelectService(serviceKey);
 
-    // 2. Smoothly scroll to contact form with offset
-    const contactSection = document.querySelector("#contact");
-    if (contactSection) {
-      const offset = 80;
-      const elementPosition = contactSection.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth",
-      });
+    // 2. Open the LeadModal with adapted path
+    if (serviceKey === "formation_elevage") {
+      setModalPath("formation");
+    } else {
+      setModalPath("accompagnement");
     }
+    setIsModalOpen(true);
   };
 
   const servicesList = [
@@ -253,6 +252,12 @@ export default function Services({ onSelectService }: ServicesProps) {
           })}
         </div>
       </div>
+      
+      <LeadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        initialPath={modalPath} 
+      />
     </section>
   );
 }

@@ -32,6 +32,7 @@ const initialForm: FormData = {
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPath?: "accompagnement" | "formation" | null;
 }
 
 const Select = ({ label, name, value, onChange, options, required }: {
@@ -73,27 +74,30 @@ const Input = ({ label, name, value, onChange, type = "text", placeholder, requi
   </div>
 );
 
-export default function LeadModal({ isOpen, onClose }: LeadModalProps) {
-  const [path, setPath] = useState<Path>(null);
-  const [step, setStep] = useState<Step>("choice");
+export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadModalProps) {
+  const [path, setPath] = useState<Path>(initialPath);
+  const [step, setStep] = useState<Step>(initialPath ? "form" : "choice");
   const [form, setForm] = useState<FormData>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Reset on close
+  // Sync state when opened or reset on close
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setPath(initialPath);
+      setStep(initialPath ? "form" : "choice");
+    } else {
       setTimeout(() => {
-        setPath(null);
-        setStep("choice");
+        setPath(initialPath);
+        setStep(initialPath ? "form" : "choice");
         setForm(initialForm);
         setError("");
         setWhatsappUrl("");
       }, 300);
     }
-  }, [isOpen]);
+  }, [isOpen, initialPath]);
 
   // Close on Escape
   useEffect(() => {
@@ -294,7 +298,7 @@ export default function LeadModal({ isOpen, onClose }: LeadModalProps) {
                         <Select label="Formation souhaitée" name="formationSouhaitee" value={form.formationSouhaitee} onChange={handleChange} required
                           options={["Élevage de volailles", "Élevage de lapins", "Élevage de porcs", "Nutrition animale", "Transformation de produits", "Autre"]} />
                         <Select label="Mode préféré" name="modePreferee" value={form.modePreferee} onChange={handleChange} required
-                          options={["Présentiel à Cotonou", "Présentiel à Parakou", "En ligne", "Les deux"]} />
+                          options={["Présentiel", "En ligne", "Les deux"]} />
                         <Select label="Disponibilité" name="disponibilite" value={form.disponibilite} onChange={handleChange} required
                           options={["En semaine", "Le weekend", "Flexible"]} />
                       </>)}
