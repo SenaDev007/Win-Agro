@@ -283,8 +283,17 @@ Merci de confirmer les disponibilités et modalités de livraison. À bientôt !
                   ))}
                 </div>
 
+                {/* Professional Win Agro signature and logo */}
+                <div className="pt-8 mt-6 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
+                  <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
+                  <p className="text-sm font-serif font-bold text-primary-deep font-sans">L'équipe Win Agro</p>
+                  <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
+                    Commandes sécurisées et gérées par notre équipe. Retrait sur place ou livraison disponible dans tout le Bénin.
+                  </p>
+                </div>
+
                 {/* Bottom padding for cart bar */}
-                <div className="h-24" />
+                <div className="h-28" />
               </div>
 
               {/* Floating Cart Bar */}
