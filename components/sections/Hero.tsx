@@ -9,14 +9,26 @@ import LeadModal from "@/components/ui/LeadModal";
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mountVideo, setMountVideo] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current) {
+    // Only load the 4.6MB video on desktop to optimize mobile page load speeds and data usage
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+    if (isDesktop) {
+      const timer = setTimeout(() => {
+        setMountVideo(true);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mountVideo && videoRef.current) {
       videoRef.current.play().catch((err) => {
         console.warn("Autoplay prevented or video loading failed:", err);
       });
     }
-  }, []);
+  }, [mountVideo]);
 
   const handleScroll = (href: string) => {
     const targetElement = document.querySelector(href);
@@ -37,24 +49,30 @@ export default function Hero() {
         id="hero"
         className="relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden bg-primary-deep text-white"
       >
-      {/* 1. Premium Background Video with Green Opacity Overlay */}
+      {/* 1. Premium Background Video or WebP Cover with Green Opacity Overlay */}
       <div className="absolute inset-0 z-0">
-        <video
-          ref={videoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          className="w-full h-full object-cover object-center scale-102"
-        >
-          <source src="/WinAgro_Hero_Video.mp4" type="video/mp4" />
-          <img
+        {!mountVideo ? (
+          <Image
             src="/ferme_moderne.png"
             alt="Win Agro Ferme d'Élevage Moderne au Bénin"
-            className="w-full h-full object-cover object-center"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center scale-102"
           />
-        </video>
+        ) : (
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="w-full h-full object-cover object-center scale-102 animate-fade-in"
+          >
+            <source src="/WinAgro_Hero_Video.mp4" type="video/mp4" />
+          </video>
+        )}
 
         {/* Dynamic mesh gradients overlaying photo */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-deep/90 via-primary-deep/80 to-noir-vert/90 mix-blend-multiply" />
