@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { localStore } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const configs = localStore.getFormConfigs().filter(f => f.isActive);

@@ -4,6 +4,8 @@ import { localStore } from "@/lib/db";
 import { put } from "@vercel/blob";
 import { v4 as uuidv4 } from "uuid";
 
+export const dynamic = "force-dynamic";
+
 function sanitize(str: any): string {
   if (typeof str !== "string") return "";
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();

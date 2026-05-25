@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { localStore } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 function sanitize(str: any): string {
   if (typeof str !== "string") return "";
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();

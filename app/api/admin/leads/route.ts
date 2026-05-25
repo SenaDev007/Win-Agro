@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { localStore } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 // API to fetch and manage leads (GET / POST to update state)
 export async function GET() {
   try {
