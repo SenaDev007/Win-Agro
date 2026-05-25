@@ -7,9 +7,9 @@ User-agent: Googlebot
 Allow: /
 
 # Host
-Host: https://winagro.bj
+Host: https://winagrotech.com
 
 # Sitemaps
-Sitemap: https://winagro.bj/sitemap.xml
-Sitemap: https://winagro.bj/sitemap-images.xml
-Sitemap: https://winagro.bj/sitemap-blog.xml
+Sitemap: https://winagrotech.com/sitemap.xml
+Sitemap: https://winagrotech.com/sitemap-images.xml
+Sitemap: https://winagrotech.com/sitemap-blog.xml

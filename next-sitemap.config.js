@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://winagro.bj',
+  siteUrl: 'https://winagrotech.com',
   generateRobotsTxt: true,
   changefreq: 'weekly',
   priority: 0.7,
@@ -28,8 +28,8 @@ module.exports = {
       }
     ],
     additionalSitemaps: [
-      'https://winagro.bj/sitemap-images.xml',
-      'https://winagro.bj/sitemap-blog.xml',
+      'https://winagrotech.com/sitemap-images.xml',
+      'https://winagrotech.com/sitemap-blog.xml',
     ],
   },
 }
