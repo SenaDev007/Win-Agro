@@ -167,6 +167,15 @@ export default function AdminCatalogPage() {
             </div>
           </div>
         ))}
+
+        {/* Global Backoffice Footer with Win Agro Signature */}
+        <footer className="pt-8 mt-12 border-t border-primary-green/10 flex flex-col items-center gap-1.5 pb-6 shrink-0">
+          <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
+          <p className="text-sm font-serif font-bold text-gray-300">L'équipe Win Agro</p>
+          <p className="text-[10px] text-gray-500 font-sans text-center max-w-[280px]">
+            Win Agro Agri Tech Solutions — Console d'administration sécurisée.
+          </p>
+        </footer>
       </main>
     </div>
   );

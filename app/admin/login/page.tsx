@@ -121,6 +121,15 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
+
+        {/* Professional Win Agro signature and logo */}
+        <div className="pt-6 mt-6 border-t border-white/10 flex flex-col items-center gap-1.5">
+          <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-10 h-10 object-contain brightness-95 opacity-80" />
+          <p className="text-xs font-serif font-bold text-white font-sans">L'équipe Win Agro</p>
+          <p className="text-[9px] text-gray-500 font-sans text-center max-w-[280px]">
+            Espace d'administration réservé. Toute tentative d'accès non autorisée est enregistrée.
+          </p>
+        </div>
       </motion.div>
     </div>
   );
