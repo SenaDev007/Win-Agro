@@ -144,8 +144,43 @@ interface CatalogueModalProps {
 
 export default function CatalogueModal({ isOpen, onClose, categoryKey }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [dynamicProducts, setDynamicProducts] = useState<any[]>([]);
 
-  const category = catalogueData.find(c => c.key === categoryKey) ?? null;
+  // Fetch updated catalog products from the admin store dynamically
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/admin/products")
+        .then((res) => res.json())
+        .then((resData) => {
+          if (resData.success && resData.products) {
+            setDynamicProducts(resData.products);
+          }
+        })
+        .catch((err) => console.error("❌ Failed to fetch current catalog prices:", err));
+    }
+  }, [isOpen]);
+
+  const rawCategory = catalogueData.find(c => c.key === categoryKey) ?? null;
+
+  // Merge static metadata with dynamic price and status variables
+  const category = React.useMemo(() => {
+    if (!rawCategory) return null;
+    
+    // Map dynamically updated values from memory store if loaded
+    const mappedProducts = rawCategory.products.map(p => {
+      const dbProduct = dynamicProducts.find(dp => dp.id === p.id);
+      return {
+        ...p,
+        price: dbProduct ? dbProduct.price : p.price,
+        isActive: dbProduct ? dbProduct.isActive : true
+      };
+    }).filter(p => p.isActive);
+
+    return {
+      ...rawCategory,
+      products: mappedProducts
+    };
+  }, [rawCategory, dynamicProducts]);
 
   // Reset cart when category changes
   useEffect(() => {

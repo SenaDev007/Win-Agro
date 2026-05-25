@@ -10,9 +10,11 @@
     "postbuild": "next-sitemap"
   },
   "dependencies": {
+    "@google-analytics/data": "^6.0.0",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "jose": "^6.2.3",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "next-sitemap": "^4.2.3",

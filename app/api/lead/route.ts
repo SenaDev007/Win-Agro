@@ -32,6 +32,37 @@ export async function POST(request: Request) {
 
       console.log(`🌱 Lead reçu de type [${typeLabel}] :`, { prenom, nom, whatsapp, ville });
 
+      // Save to local in-memory DB for backoffice visibility
+      try {
+        const { localStore } = require("@/lib/db");
+        const detailsObj: Record<string, string> = {};
+        if (type === "accompagnement") {
+          detailsObj["Type d'élevage"] = (data as any).typeElevage;
+          detailsObj["Expérience"] = (data as any).experience;
+          detailsObj["Besoin"] = (data as any).besoin;
+          detailsObj["Budget"] = (data as any).budget || "Non spécifié";
+        } else if (type === "formation") {
+          detailsObj["Formation"] = (data as any).formationSouhaitee;
+          detailsObj["Mode préféré"] = (data as any).modePreferee;
+          detailsObj["Disponibilité"] = (data as any).disponibilite;
+        } else if (type === "consultation") {
+          detailsObj["Élevage actuel"] = (data as any).typeElevageActuel;
+          detailsObj["Problème"] = (data as any).problemePrincipal;
+          detailsObj["Durée"] = (data as any).depuisCombienDeTemps;
+          detailsObj["Urgence"] = (data as any).urgence;
+        }
+
+        localStore.addLead({
+          name: `${prenom} ${nom}`,
+          phone: whatsapp,
+          type: typeLabel,
+          location: ville,
+          details: detailsObj
+        });
+      } catch (dbErr) {
+        console.error("❌ Failed to log lead to in-memory store:", dbErr);
+      }
+
       let htmlDetails = "";
       let emailSubject = "";
       let whatsappMessage = "";
@@ -221,6 +252,23 @@ Voici mes informations :
     const serviceLabel = serviceLabels[service];
 
     console.log("🌱 Lead reçu (Classique) :", { fullName, phone, service: serviceLabel, message });
+
+    // Save to local in-memory DB for backoffice visibility
+    try {
+      const { localStore } = require("@/lib/db");
+      localStore.addLead({
+        name: fullName,
+        phone: phone,
+        type: "Contact Standard",
+        location: "Non spécifiée",
+        details: {
+          "Service demandé": serviceLabel,
+          "Message": message || "Aucun message"
+        }
+      });
+    } catch (dbErr) {
+      console.error("❌ Failed to log classic lead to in-memory store:", dbErr);
+    }
 
     let emailSent = false;
     if (resend) {
