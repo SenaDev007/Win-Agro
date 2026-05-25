@@ -27,8 +27,8 @@ export async function decrypt(input: string): Promise<any> {
 
 export async function loginAdmin(email: string, password: string) {
   const { localStore } = require("./db");
-  const overrideEmail = localStore.getAdminEmail();
-  const overridePass = localStore.getAdminPassword();
+  const overrideEmail = await localStore.getAdminEmail();
+  const overridePass = await localStore.getAdminPassword();
   const adminEmail = overrideEmail || process.env.ADMIN_EMAIL || "contact@winagrotech.com";
   const adminPassword = overridePass || process.env.ADMIN_PASSWORD || "WinAgroAdmin2026!";
 

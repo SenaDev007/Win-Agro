@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const forms = localStore.getFormConfigs();
+    const forms = await localStore.getFormConfigs();
     return NextResponse.json({ success: true, forms });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     if (!isNew) {
       // Update
-      const success = localStore.updateFormConfig(newConfig);
+      const success = await localStore.updateFormConfig(newConfig);
       if (success) {
         return NextResponse.json({ success: true });
       } else {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       }
     } else {
       // Create
-      const success = localStore.addFormConfig(newConfig);
+      const success = await localStore.addFormConfig(newConfig);
       if (success) {
         return NextResponse.json({ success: true, config: newConfig });
       } else {
@@ -96,7 +96,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: "Clé requise" }, { status: 400 });
     }
 
-    const success = localStore.deleteFormConfig(key);
+    const success = await localStore.deleteFormConfig(key);
     if (success) {
       return NextResponse.json({ success: true });
     } else {

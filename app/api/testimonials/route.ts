@@ -14,7 +14,7 @@ function sanitize(str: any): string {
 
 export async function GET() {
   try {
-    const all = localStore.getTestimonials();
+    const all = await localStore.getTestimonials();
     const active = all.filter(t => t.isActive);
     return NextResponse.json({ success: true, testimonials: active });
   } catch (error: any) {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     // Add as pending/inactive by default
-    const newTestimonial = localStore.addTestimonial({
+    const newTestimonial = await localStore.addTestimonial({
       name: cleanName,
       role: cleanRole,
       text: cleanText,

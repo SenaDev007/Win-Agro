@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const leads = localStore.getLeads();
+    const leads = await localStore.getLeads();
     return NextResponse.json({ success: true, leads });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Champs manquants" }, { status: 400 });
     }
 
-    const updated = localStore.updateLeadStatus(id, status);
+    const updated = await localStore.updateLeadStatus(id, status);
     if (updated) {
       return NextResponse.json({ success: true });
     } else {

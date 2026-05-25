@@ -41,4 +41,6 @@ yarn-error.log*
 next-env.d.ts
 Antigravity-x64.exe
 win-agro-5bb9101b4b41.json
+lib/db_store.json
+
 

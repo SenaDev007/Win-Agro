@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const all = localStore.getServices();
+    const all = await localStore.getServices();
     const active = all.filter(s => s.isActive);
     return NextResponse.json({ success: true, services: active });
   } catch (error: any) {

@@ -32,7 +32,8 @@ export async function POST(request: Request) {
       }
 
       // Fetch dynamic form configuration
-      const config = localStore.getFormConfigs().find(f => f.key === cleanType);
+      const configs = await localStore.getFormConfigs();
+      const config = configs.find(f => f.key === cleanType);
       if (!config) {
         return NextResponse.json({ success: false, message: "Formulaire inconnu" }, { status: 400 });
       }
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
       // Log lead to database
       const typeLabel = config.title;
-      const newLead = localStore.addLead({
+      const newLead = await localStore.addLead({
         name: `${cleanPrenom} ${cleanNom}`,
         phone: cleanWhatsapp,
         type: typeLabel,
@@ -170,7 +171,7 @@ Voici mes coordonnées :
 
     console.log("🌱 Lead reçu (Classique) :", { cleanFullName, cleanPhone, service: serviceLabel, cleanMessage });
 
-    localStore.addLead({
+    await localStore.addLead({
       name: cleanFullName,
       phone: cleanPhone,
       type: "Contact Standard",

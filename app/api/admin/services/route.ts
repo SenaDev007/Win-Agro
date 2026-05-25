@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const services = localStore.getServices();
+    const services = await localStore.getServices();
     return NextResponse.json({ success: true, services });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     if (key && !isNew) {
       // Update
-      const success = localStore.updateService({
+      const success = await localStore.updateService({
         key,
         title: cleanTitle,
         hook: cleanHook,
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     } else {
       // Create
       const generatedKey = key ? sanitize(key).replace(/\s+/g, "_").toLowerCase() : undefined;
-      const newS = localStore.addService({
+      const newS = await localStore.addService({
         key: generatedKey,
         title: cleanTitle,
         hook: cleanHook,
@@ -104,7 +104,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: "Clé de service requise" }, { status: 400 });
     }
 
-    const success = localStore.deleteService(key);
+    const success = await localStore.deleteService(key);
     if (success) {
       return NextResponse.json({ success: true });
     } else {

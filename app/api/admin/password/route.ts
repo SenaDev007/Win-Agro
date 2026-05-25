@@ -19,7 +19,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      localStore.setAdminEmail(newEmail);
+      await localStore.setAdminEmail(newEmail);
     }
 
     if (newPassword) {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      localStore.setAdminPassword(newPassword);
+      await localStore.setAdminPassword(newPassword);
     }
 
     console.log("🔐 Admin credentials updated successfully");

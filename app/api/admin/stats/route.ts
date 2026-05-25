@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const stats = localStore.getStats();
+    const stats = await localStore.getStats();
     return NextResponse.json({ success: true, stats });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const cleanLabel = sanitize(label);
     const cleanSubText = sanitize(subText);
 
-    const success = localStore.updateStat({
+    const success = await localStore.updateStat({
       id,
       value: numValue,
       suffix: cleanSuffix,

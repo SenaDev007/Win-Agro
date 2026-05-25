@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const testimonials = localStore.getTestimonials();
+    const testimonials = await localStore.getTestimonials();
     return NextResponse.json({ success: true, testimonials });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
     if (id) {
       // Update
-      const success = localStore.updateTestimonial({
+      const success = await localStore.updateTestimonial({
         id,
         text: cleanText,
         highlight: cleanHighlight,
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       }
     } else {
       // Create
-      const newT = localStore.addTestimonial({
+      const newT = await localStore.addTestimonial({
         text: cleanText,
         highlight: cleanHighlight,
         image: cleanImage,
@@ -136,7 +136,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: "ID requis" }, { status: 400 });
     }
 
-    const success = localStore.deleteTestimonial(id);
+    const success = await localStore.deleteTestimonial(id);
     if (success) {
       return NextResponse.json({ success: true });
     } else {

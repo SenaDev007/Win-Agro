@@ -5,7 +5,7 @@ import { localStore } from "@/lib/db";
 // API to fetch and edit products in the catalog (GET / POST)
 export async function GET() {
   try {
-    const products = localStore.getProducts();
+    const products = await localStore.getProducts();
     return NextResponse.json({ success: true, products });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
@@ -27,11 +27,11 @@ export async function POST(request: Request) {
     }
 
     if (price !== undefined) {
-      localStore.updateProductPrice(id, price === "" || price === null ? null : Number(price));
+      await localStore.updateProductPrice(id, price === "" || price === null ? null : Number(price));
     }
 
     if (isActive !== undefined) {
-      localStore.updateProductStatus(id, Boolean(isActive));
+      await localStore.updateProductStatus(id, Boolean(isActive));
     }
 
     return NextResponse.json({ success: true });
