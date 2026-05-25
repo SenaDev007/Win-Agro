@@ -4,45 +4,33 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, Loader2, CheckCircle2, Sprout, BookOpen, Stethoscope } from "lucide-react";
 
-type Path = null | "accompagnement" | "formation" | "consultation";
 type Step = "choice" | "form" | "success";
 
-interface FormData {
-  prenom: string;
-  nom: string;
-  whatsapp: string;
-  ville: string;
-  // accompagnement
-  typeElevage: string;
-  experience: string;
-  besoin: string;
-  budget: string;
-  // formation
-  formationSouhaitee: string;
-  modePreferee: string;
-  disponibilite: string;
-  // consultation
-  typeElevageActuel: string;
-  problemePrincipal: string;
-  depuisCombienDeTemps: string;
-  urgence: string;
+interface FormField {
+  name: string;
+  label: string;
+  type: "text" | "select";
+  options?: string[];
+  required: boolean;
 }
 
-const initialForm: FormData = {
-  prenom: "", nom: "", whatsapp: "", ville: "",
-  typeElevage: "", experience: "", besoin: "", budget: "",
-  formationSouhaitee: "", modePreferee: "", disponibilite: "",
-  typeElevageActuel: "", problemePrincipal: "", depuisCombienDeTemps: "", urgence: "",
-};
+interface FormConfig {
+  key: string;
+  title: string;
+  heroBgUrl?: string;
+  description: string;
+  fields: FormField[];
+  isActive: boolean;
+}
 
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialPath?: "accompagnement" | "formation" | "consultation" | null;
+  initialPath?: string | null;
 }
 
 const Select = ({ label, name, value, onChange, options, required }: {
-  label: string; name: keyof FormData; value: string;
+  label: string; name: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: string[]; required?: boolean;
 }) => (
@@ -62,7 +50,7 @@ const Select = ({ label, name, value, onChange, options, required }: {
 );
 
 const Input = ({ label, name, value, onChange, type = "text", placeholder, required }: {
-  label: string; name: keyof FormData; value: string;
+  label: string; name: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string; placeholder?: string; required?: boolean;
 }) => (
@@ -80,26 +68,35 @@ const Input = ({ label, name, value, onChange, type = "text", placeholder, requi
   </div>
 );
 
-const heroBg: Record<NonNullable<Path>, string> = {
+const defaultHeroBg: Record<string, string> = {
   accompagnement: 'url("/lead_accompagnement.png")',
   formation: 'url("/lead_formation.png")',
   consultation: 'url("/lead_consultation.png")',
 };
 
-const heroTitle: Record<NonNullable<Path>, string> = {
-  accompagnement: "Votre projet d'élevage",
-  formation: "Inscription à la formation",
-  consultation: "Consultation & Diagnostic",
-};
-
 export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadModalProps) {
-  const [path, setPath] = useState<Path>(initialPath);
+  const [formConfigs, setFormConfigs] = useState<FormConfig[]>([]);
+  const [path, setPath] = useState<string | null>(initialPath);
   const [step, setStep] = useState<Step>(initialPath ? "form" : "choice");
-  const [form, setForm] = useState<FormData>(initialForm);
+  const [form, setForm] = useState<Record<string, string>>({
+    prenom: "", nom: "", whatsapp: "", ville: ""
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // 1. Fetch form configs dynamically
+  useEffect(() => {
+    fetch("/api/forms")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.forms)) {
+          setFormConfigs(data.forms);
+        }
+      })
+      .catch(err => console.error("Error fetching form configurations:", err));
+  }, []);
 
   // Sync state when opened or reset on close
   useEffect(() => {
@@ -110,7 +107,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
       setTimeout(() => {
         setPath(initialPath);
         setStep(initialPath ? "form" : "choice");
-        setForm(initialForm);
+        setForm({ prenom: "", nom: "", whatsapp: "", ville: "" });
         setError("");
         setWhatsappUrl("");
       }, 300);
@@ -135,13 +132,12 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleChoose = (choice: Path) => {
+  const handleChoose = (choice: string) => {
     setPath(choice);
     setStep("form");
   };
 
   const handleBack = () => {
-    // If initialPath is set, we can't go back to choice (modal was opened directly)
     if (initialPath) {
       onClose();
     } else {
@@ -151,32 +147,30 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
     }
   };
 
+  const currentConfig = formConfigs.find(f => f.key === path);
+  const bgStyle = currentConfig?.heroBgUrl 
+    ? `url("${currentConfig.heroBgUrl}")` 
+    : (path && defaultHeroBg[path] ? defaultHeroBg[path] : 'url("/lead_accompagnement.png")');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      let payload: Record<string, string>;
+      if (!path) return;
+      const payload: Record<string, any> = {
+        type: path,
+        prenom: form.prenom,
+        nom: form.nom,
+        whatsapp: form.whatsapp,
+        ville: form.ville,
+      };
 
-      if (path === "accompagnement") {
-        payload = {
-          type: path,
-          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
-          typeElevage: form.typeElevage, experience: form.experience, besoin: form.besoin, budget: form.budget,
-        };
-      } else if (path === "formation") {
-        payload = {
-          type: path,
-          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
-          formationSouhaitee: form.formationSouhaitee, modePreferee: form.modePreferee, disponibilite: form.disponibilite,
-        };
-      } else {
-        payload = {
-          type: "consultation",
-          prenom: form.prenom, nom: form.nom, whatsapp: form.whatsapp, ville: form.ville,
-          typeElevageActuel: form.typeElevageActuel, problemePrincipal: form.problemePrincipal,
-          depuisCombienDeTemps: form.depuisCombienDeTemps, urgence: form.urgence,
-        };
+      // Add extra form fields to payload
+      if (currentConfig) {
+        for (const field of currentConfig.fields) {
+          payload[field.name] = form[field.name] || "";
+        }
       }
 
       const res = await fetch("/api/lead", {
@@ -234,7 +228,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
               {/* Header */}
               <div
                 className={`px-6 pt-6 pb-5 relative shrink-0 ${step === 'form' ? 'bg-cover bg-center overflow-hidden' : 'bg-noir-vert'}`}
-                style={step === 'form' && path ? { backgroundImage: heroBg[path] } : {}}
+                style={step === 'form' && path ? { backgroundImage: bgStyle } : {}}
               >
                 {step === 'form' && <div className="absolute inset-0 bg-noir-vert/80 z-0 backdrop-blur-sm" />}
                 <div className="flex items-center justify-between relative z-10">
@@ -253,7 +247,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                       <p className="text-accent-yellow text-[10px] font-sans font-black uppercase tracking-widest">Win Agro Agri Tech Solutions</p>
                       <h2 className="text-white font-serif text-lg font-bold leading-tight mt-0.5">
                         {step === "choice" && "Comment pouvons-nous vous aider ?"}
-                        {step === "form" && path && heroTitle[path]}
+                        {step === "form" && currentConfig?.title}
                         {step === "success" && "Demande envoyée ! 🎉"}
                       </h2>
                     </div>
@@ -277,44 +271,31 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                     <motion.div key="choice" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="space-y-4">
                       <p className="text-sm text-gray-500 font-sans text-center">Choisissez votre parcours pour que nous vous proposions le meilleur accompagnement.</p>
                       
-                      <button
-                        onClick={() => handleChoose("accompagnement")}
-                        className="group w-full flex items-start gap-4 p-5 rounded-2xl border-2 border-primary-green/20 hover:border-primary-green bg-white hover:bg-primary-pale transition-all duration-200 text-left"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-primary-green/10 group-hover:bg-primary-green/20 flex items-center justify-center shrink-0 transition-colors">
-                          <Sprout className="w-6 h-6 text-primary-green" />
+                      {formConfigs.length === 0 ? (
+                        <div className="flex justify-center py-6">
+                          <Loader2 className="w-6 h-6 text-primary-green animate-spin" />
                         </div>
-                        <div>
-                          <p className="font-serif font-bold text-primary-deep text-base">Je veux être accompagné sur mon projet</p>
-                          <p className="text-xs text-gray-500 font-sans mt-1">Installation de ferme, suivi technique, conseils personnalisés</p>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => handleChoose("formation")}
-                        className="group w-full flex items-start gap-4 p-5 rounded-2xl border-2 border-primary-green/20 hover:border-primary-green bg-white hover:bg-primary-pale transition-all duration-200 text-left"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-accent-yellow/20 group-hover:bg-accent-yellow/30 flex items-center justify-center shrink-0 transition-colors">
-                          <BookOpen className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <div>
-                          <p className="font-serif font-bold text-primary-deep text-base">Je veux me former en élevage</p>
-                          <p className="text-xs text-gray-500 font-sans mt-1">Volailles, lapins, porcs, nutrition animale, transformation</p>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => handleChoose("consultation")}
-                        className="group w-full flex items-start gap-4 p-5 rounded-2xl border-2 border-primary-green/20 hover:border-primary-green bg-white hover:bg-primary-pale transition-all duration-200 text-left"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-red-50 group-hover:bg-red-100 flex items-center justify-center shrink-0 transition-colors">
-                          <Stethoscope className="w-6 h-6 text-red-500" />
-                        </div>
-                        <div>
-                          <p className="font-serif font-bold text-primary-deep text-base">Je veux un diagnostic de ma ferme</p>
-                          <p className="text-xs text-gray-500 font-sans mt-1">Audit, résolution de problèmes, optimisation des performances</p>
-                        </div>
-                      </button>
+                      ) : (
+                        formConfigs.map((cfg) => {
+                          const Icon = cfg.key === "accompagnement" ? Sprout : cfg.key === "formation" ? BookOpen : Stethoscope;
+                          const iconBg = cfg.key === "accompagnement" ? "bg-primary-green/10 text-primary-green" : cfg.key === "formation" ? "bg-accent-yellow/20 text-amber-600" : "bg-red-50 text-red-500";
+                          return (
+                            <button
+                              key={cfg.key}
+                              onClick={() => handleChoose(cfg.key)}
+                              className="group w-full flex items-start gap-4 p-5 rounded-2xl border-2 border-primary-green/20 hover:border-primary-green bg-white hover:bg-primary-pale transition-all duration-200 text-left"
+                            >
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${iconBg}`}>
+                                <Icon className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <p className="font-serif font-bold text-primary-deep text-base">{cfg.title}</p>
+                                <p className="text-xs text-gray-500 font-sans mt-1">{cfg.description}</p>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
                     </motion.div>
                   )}
 
@@ -330,42 +311,34 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                       <Input label="Numéro WhatsApp" name="whatsapp" value={form.whatsapp} onChange={handleChange} type="tel" placeholder="+229 01 XX XX XX XX" required />
                       <Input label="Ville / Localisation" name="ville" value={form.ville} onChange={handleChange} placeholder="Cotonou, Parakou, Porto-Novo..." required />
 
-                      {/* Accompagnement fields */}
-                      {path === "accompagnement" && (<>
-                        <Select label="Type d'élevage envisagé" name="typeElevage" value={form.typeElevage} onChange={handleChange} required
-                          options={["Poulets de chair", "Pondeuses", "Pintades", "Cailles", "Lapins", "Porcs", "Autre"]} />
-                        <Select label="Niveau d'expérience" name="experience" value={form.experience} onChange={handleChange} required
-                          options={["Débutant complet", "J'ai déjà essayé", "J'ai une ferme active"]} />
-                        <Select label="Besoin principal" name="besoin" value={form.besoin} onChange={handleChange} required
-                          options={["Installation de ferme", "Accompagnement technique", "Financement de projet", "Formation + suivi", "Autre"]} />
-                        <Select label="Budget estimé (FCFA)" name="budget" value={form.budget} onChange={handleChange}
-                          options={["Moins de 500 000 FCFA", "500 000 – 2 000 000 FCFA", "Plus de 2 000 000 FCFA", "Je ne sais pas encore"]} />
-                      </>)}
-
-                      {/* Formation fields */}
-                      {path === "formation" && (<>
-                        <Select label="Formation souhaitée" name="formationSouhaitee" value={form.formationSouhaitee} onChange={handleChange} required
-                          options={["Élevage de volailles", "Élevage de lapins", "Élevage de porcs", "Nutrition animale", "Transformation de produits", "Autre"]} />
-                        <Select label="Mode préféré" name="modePreferee" value={form.modePreferee} onChange={handleChange} required
-                          options={["Présentiel", "En ligne", "Les deux"]} />
-                        <Select label="Disponibilité" name="disponibilite" value={form.disponibilite} onChange={handleChange} required
-                          options={["En semaine", "Le weekend", "Flexible"]} />
-                      </>)}
-
-                      {/* Consultation fields */}
-                      {path === "consultation" && (<>
-                        <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-xs text-red-700 font-sans">
-                          🔍 Victoire analysera votre situation et vous proposera un plan d'action personnalisé.
-                        </div>
-                        <Select label="Type d'élevage actuel" name="typeElevageActuel" value={form.typeElevageActuel} onChange={handleChange} required
-                          options={["Volailles (chair / pondeuses)", "Pintades / Cailles", "Lapins", "Porcs", "Élevage mixte", "Autre"]} />
-                        <Select label="Problème principal constaté" name="problemePrincipal" value={form.problemePrincipal} onChange={handleChange} required
-                          options={["Mortalité élevée", "Faible productivité / croissance lente", "Maladies récurrentes", "Alimentation inadaptée", "Rentabilité insuffisante", "Autre"]} />
-                        <Select label="Depuis combien de temps ?" name="depuisCombienDeTemps" value={form.depuisCombienDeTemps} onChange={handleChange} required
-                          options={["Moins d'1 mois", "1 à 3 mois", "Plus de 3 mois"]} />
-                        <Select label="Niveau d'urgence" name="urgence" value={form.urgence} onChange={handleChange} required
-                          options={["Urgent — cette semaine", "Dans le mois", "Pas encore urgent"]} />
-                      </>)}
+                      {/* Dynamic fields from chosen form config */}
+                      {currentConfig?.fields.map((field) => {
+                        if (field.type === "select") {
+                          return (
+                            <Select
+                              key={field.name}
+                              label={field.label}
+                              name={field.name}
+                              value={form[field.name] || ""}
+                              onChange={handleChange}
+                              required={field.required}
+                              options={field.options || []}
+                            />
+                          );
+                        } else {
+                          return (
+                            <Input
+                              key={field.name}
+                              label={field.label}
+                              name={field.name}
+                              value={form[field.name] || ""}
+                              onChange={handleChange}
+                              required={field.required}
+                              placeholder={`Saisir votre ${field.label.toLowerCase()}`}
+                            />
+                          );
+                        }
+                      })}
 
                       {error && <p className="text-red-500 text-xs font-sans bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 

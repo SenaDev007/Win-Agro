@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   
-  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services" | "stats">("analytics");
+  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services" | "stats" | "forms">("analytics");
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -27,7 +27,26 @@ export default function AdminDashboard() {
   const [passError, setPassError] = useState("");
 
   // Lead Filter State
-  const [leadFilter, setLeadFilter] = useState<"all" | "accompagnement" | "formation" | "consultation">("all");
+  const [leadFilter, setLeadFilter] = useState<string>("all");
+
+  // Dynamic Forms State
+  const [formConfigs, setFormConfigs] = useState<any[]>([]);
+  const [editingForm, setEditingForm] = useState<any | null>(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {}
+  });
 
   // Stats State
   const [stats, setStats] = useState<any[]>([]);
@@ -71,12 +90,13 @@ export default function AdminDashboard() {
   // Fetch admin states
   const loadDashboardData = async () => {
     try {
-      const [analyticsRes, leadsRes, testimonialsRes, servicesRes, statsRes] = await Promise.all([
+      const [analyticsRes, leadsRes, testimonialsRes, servicesRes, statsRes, formsRes] = await Promise.all([
         fetch("/api/analytics?token=internal"),
         fetch("/api/admin/leads"),
         fetch("/api/admin/testimonials"),
         fetch("/api/admin/services"),
-        fetch("/api/admin/stats")
+        fetch("/api/admin/stats"),
+        fetch("/api/admin/forms")
       ]);
 
       if (
@@ -84,7 +104,8 @@ export default function AdminDashboard() {
         leadsRes.status === 401 || 
         testimonialsRes.status === 401 ||
         servicesRes.status === 401 ||
-        statsRes.status === 401
+        statsRes.status === 401 ||
+        formsRes.status === 401
       ) {
         router.push(isSubdomain ? "/login" : "/admin/login");
         return;
@@ -95,12 +116,14 @@ export default function AdminDashboard() {
       const testimonialsData = await testimonialsRes.json();
       const servicesData = await servicesRes.json();
       const statsData = await statsRes.json();
+      const formsData = await formsRes.json();
 
       if (analyticsData.success) setData(analyticsData);
       if (leadsData.success) setLeads(leadsData.leads);
       if (testimonialsData.success) setTestimonials(testimonialsData.testimonials);
       if (servicesData.success) setServices(servicesData.services);
       if (statsData.success) setStats(statsData.stats);
+      if (formsData.success) setFormConfigs(formsData.forms);
     } catch (err) {
       console.error(err);
     } finally {
@@ -276,19 +299,26 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteTestimonial = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer ce témoignage ?")) return;
-    try {
-      const res = await fetch(`/api/admin/testimonials?id=${id}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      if (data.success) {
-        loadDashboardData();
+  const handleDeleteTestimonial = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer le témoignage ?",
+      message: "Voulez-vous vraiment supprimer définitivement ce témoignage client ? Cette opération ne peut pas être annulée.",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/admin/testimonials?id=${id}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (data.success) {
+            loadDashboardData();
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
-    } catch (err) {
-      console.error(err);
-    }
+    });
   };
 
   const handleToggleTestimonialStatus = async (t: any) => {
@@ -381,19 +411,26 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteService = async (key: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer ce service ?")) return;
-    try {
-      const res = await fetch(`/api/admin/services?key=${key}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      if (data.success) {
-        loadDashboardData();
+  const handleDeleteService = (key: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer le service ?",
+      message: "Voulez-vous vraiment supprimer définitivement ce service ? Cette opération ne peut pas être annulée.",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/admin/services?key=${key}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (data.success) {
+            loadDashboardData();
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
-    } catch (err) {
-      console.error(err);
-    }
+    });
   };
 
   const handleToggleServiceStatus = async (s: any) => {
@@ -424,11 +461,104 @@ export default function AdminDashboard() {
 
   const filteredLeads = leads.filter(lead => {
     if (leadFilter === "all") return true;
-    if (leadFilter === "accompagnement") return lead.type.toLowerCase().includes("accompagnement");
-    if (leadFilter === "formation") return lead.type.toLowerCase().includes("formation");
-    if (leadFilter === "consultation") return lead.type.toLowerCase().includes("consultation");
-    return true;
+    return lead.type.toLowerCase().includes(leadFilter.toLowerCase());
   });
+
+  // Dynamic Forms CRUD Handlers
+  const handleOpenFormConfig = (cfg?: any) => {
+    if (cfg) {
+      setEditingForm({
+        key: cfg.key,
+        title: cfg.title,
+        heroBgUrl: cfg.heroBgUrl || "",
+        description: cfg.description,
+        fields: [...cfg.fields],
+        isActive: cfg.isActive,
+        isNew: false
+      });
+    } else {
+      setEditingForm({
+        key: "",
+        title: "",
+        heroBgUrl: "",
+        description: "",
+        fields: [],
+        isActive: true,
+        isNew: true
+      });
+    }
+    setFormError("");
+  };
+
+  const handleSaveFormConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingForm) return;
+    setFormSaving(true);
+    setFormError("");
+
+    try {
+      const res = await fetch("/api/admin/forms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingForm(null);
+        loadDashboardData();
+      } else {
+        setFormError(data.error || "Erreur de validation");
+      }
+    } catch (err) {
+      setFormError("Erreur de connexion avec le serveur.");
+    } finally {
+      setFormSaving(false);
+    }
+  };
+
+  const handleDeleteFormConfig = (key: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer le formulaire ?",
+      message: "Voulez-vous vraiment supprimer définitivement ce formulaire d'inscription ? Cette opération ne peut pas être annulée.",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/admin/forms?key=${key}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (data.success) {
+            loadDashboardData();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  };
+
+  const handleAddFormField = () => {
+    if (!editingForm) return;
+    setEditingForm((prev: any) => ({
+      ...prev,
+      fields: [...prev.fields, { name: "", label: "", type: "text", options: [], required: true }]
+    }));
+  };
+
+  const handleRemoveFormField = (index: number) => {
+    if (!editingForm) return;
+    const newFields = [...editingForm.fields];
+    newFields.splice(index, 1);
+    setEditingForm((prev: any) => ({ ...prev, fields: newFields }));
+  };
+
+  const handleFieldChange = (index: number, key: string, val: any) => {
+    if (!editingForm) return;
+    const newFields = [...editingForm.fields];
+    newFields[index] = { ...newFields[index], [key]: val };
+    setEditingForm((prev: any) => ({ ...prev, fields: newFields }));
+  };
 
   return (
     <div className="min-h-screen bg-[#07130A] text-white font-sans flex flex-col">
@@ -541,6 +671,16 @@ export default function AdminDashboard() {
             <Percent className="w-4 h-4 text-primary-green" />
             Chiffres Clés
             {tab === "stats" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("forms")}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "forms" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+          >
+            <AlertCircle className="w-4 h-4 text-primary-green" />
+            Formulaires
+            {tab === "forms" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
             )}
           </button>
@@ -695,22 +835,23 @@ export default function AdminDashboard() {
 
               {/* Filter buttons for the different forms */}
               <div className="flex flex-wrap gap-1.5 bg-black/20 p-1 rounded-2xl border border-white/5">
-                {[
-                  { key: "all", label: "Tous" },
-                  { key: "accompagnement", label: "Accompagnement" },
-                  { key: "formation", label: "Formations" },
-                  { key: "consultation", label: "Diagnostics" }
-                ].map(f => (
+                <button
+                  onClick={() => setLeadFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                    leadFilter === "all" ? "bg-primary-green text-[#07130A]" : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Tous
+                </button>
+                {formConfigs.map(f => (
                   <button
                     key={f.key}
-                    onClick={() => setLeadFilter(f.key as any)}
+                    onClick={() => setLeadFilter(f.key)}
                     className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                      leadFilter === f.key
-                        ? "bg-primary-green text-[#07130A]"
-                        : "text-gray-400 hover:text-white"
+                      leadFilter === f.key ? "bg-primary-green text-[#07130A]" : "text-gray-400 hover:text-white"
                     }`}
                   >
-                    {f.label}
+                    {f.title}
                   </button>
                 ))}
               </div>
@@ -1483,6 +1624,274 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {tab === "forms" && (
+          <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold">Gestion des Formulaires d'Inscription</h3>
+                <p className="text-xs text-gray-400">Configurez les étapes, descriptions et champs des formulaires d'inscription en direct.</p>
+              </div>
+              <button
+                onClick={() => handleOpenFormConfig()}
+                className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all self-start"
+              >
+                <Plus className="w-4 h-4" /> Créer un formulaire
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {formConfigs.map(f => (
+                <div key={f.key} className="p-6 rounded-2xl bg-black/30 border border-white/5 flex flex-col justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-serif font-black text-base text-white">{f.title}</h4>
+                        <p className="text-[10px] text-primary-green font-mono uppercase tracking-wider font-bold mt-0.5">Clé : {f.key}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${f.isActive ? "bg-green-950 text-green-300" : "bg-red-950 text-red-300"}`}>
+                        {f.isActive ? "Actif" : "Masqué"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">{f.description}</p>
+                    {f.heroBgUrl && (
+                      <p className="text-[9.5px] text-gray-500 font-mono truncate">Image : {f.heroBgUrl}</p>
+                    )}
+
+                    <div className="pt-2">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Champs personnalisés ({f.fields.length}) :</p>
+                      <div className="flex flex-wrap gap-1">
+                        {f.fields.map((fld: any) => (
+                          <span key={fld.name} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-[9px] text-gray-300">
+                            {fld.label} {fld.required && "*"} ({fld.type})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3 mt-auto">
+                    <button
+                      onClick={() => handleOpenFormConfig(f)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white cursor-pointer"
+                      title="Modifier"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFormConfig(f.key)}
+                      className="p-1.5 rounded-lg bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-950/40 cursor-pointer"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Form Config Edit Modal */}
+            {editingForm && (
+              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-2xl bg-[#0F2214] border border-primary-green/20 rounded-3xl p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[90vh]">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="font-serif text-base font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-primary-green" />
+                      {editingForm.isNew ? "Créer un Formulaire" : "Modifier le Formulaire"}
+                    </h3>
+                    <button
+                      onClick={() => setEditingForm(null)}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {formError && (
+                    <div className="p-3 bg-red-950/40 border border-red-900/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {formError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveFormConfig} className="space-y-4 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Titre du parcours / formulaire</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingForm.title}
+                          onChange={(e) => setEditingForm((prev: any) => ({ ...prev, title: e.target.value }))}
+                          placeholder="Ex: Votre projet d'élevage"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Clé unique (Slug)</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!editingForm.isNew}
+                          value={editingForm.key}
+                          onChange={(e) => setEditingForm((prev: any) => ({ ...prev, key: e.target.value }))}
+                          placeholder="Ex: accompagnement"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">URL de l'image d'en-tête (optionnel)</label>
+                        <input
+                          type="text"
+                          value={editingForm.heroBgUrl}
+                          onChange={(e) => setEditingForm((prev: any) => ({ ...prev, heroBgUrl: e.target.value }))}
+                          placeholder="Ex: /lead_accompagnement.png"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Description courte</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingForm.description}
+                          onChange={(e) => setEditingForm((prev: any) => ({ ...prev, description: e.target.value }))}
+                          placeholder="Ex: Installation de ferme, suivi..."
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Form Fields Config List Builder */}
+                    <div className="space-y-3 pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-300 font-bold uppercase tracking-wider">Champs du Formulaire d'Inscription</p>
+                        <button
+                          type="button"
+                          onClick={handleAddFormField}
+                          className="px-2.5 py-1 rounded bg-primary-green/20 hover:bg-primary-green/30 text-primary-green text-[10px] font-bold flex items-center gap-1 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Ajouter un champ
+                        </button>
+                      </div>
+
+                      <div className="space-y-2.5 max-h-[30vh] overflow-y-auto pr-1">
+                        {editingForm.fields.map((field: any, idx: number) => (
+                          <div key={idx} className="p-3 rounded-xl bg-black/20 border border-white/5 flex flex-col gap-2 relative">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFormField(idx)}
+                              className="absolute top-2 right-2 text-gray-500 hover:text-red-400 transition-colors"
+                              title="Retirer ce champ"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pr-6">
+                              <div className="space-y-1">
+                                <label className="text-gray-500 font-semibold">ID / Nom technique</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={field.name}
+                                  onChange={(e) => handleFieldChange(idx, "name", e.target.value)}
+                                  placeholder="Ex: typeElevage"
+                                  className="w-full px-2 py-1 bg-black/30 border border-white/10 rounded-lg text-white font-mono"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-gray-500 font-semibold">Libellé (Label)</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={field.label}
+                                  onChange={(e) => handleFieldChange(idx, "label", e.target.value)}
+                                  placeholder="Ex: Type d'élevage"
+                                  className="w-full px-2 py-1 bg-black/30 border border-white/10 rounded-lg text-white"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-gray-500 font-semibold">Type de champ</label>
+                                <select
+                                  value={field.type}
+                                  onChange={(e) => handleFieldChange(idx, "type", e.target.value)}
+                                  className="w-full px-2 py-1 bg-[#0F2214] border border-white/10 rounded-lg text-white"
+                                >
+                                  <option value="text">Texte libre</option>
+                                  <option value="select">Liste déroulante (Sélecteur)</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {field.type === "select" && (
+                              <div className="space-y-1">
+                                <label className="text-gray-500 font-semibold">Options (Séparées par des virgules)</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={Array.isArray(field.options) ? field.options.join(", ") : ""}
+                                  onChange={(e) => handleFieldChange(idx, "options", e.target.value.split(",").map((s: string) => s.trim()))}
+                                  placeholder="Ex: Poulets de chair, Pondeuses, Porcs"
+                                  className="w-full px-2.5 py-1 bg-black/30 border border-white/10 rounded-lg text-white"
+                                />
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`fieldReq_${idx}`}
+                                checked={field.required}
+                                onChange={(e) => handleFieldChange(idx, "required", e.target.checked)}
+                                className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                              />
+                              <label htmlFor={`fieldReq_${idx}`} className="text-gray-400 font-semibold cursor-pointer">Ce champ est obligatoire</label>
+                            </div>
+                          </div>
+                        ))}
+                        {editingForm.fields.length === 0 && (
+                          <p className="text-[10px] text-gray-500 text-center py-4">Aucun champ personnalisé défini. Seuls les champs de base (Nom, Prénom, WhatsApp, Ville) seront affichés.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="fIsActive"
+                        checked={editingForm.isActive}
+                        onChange={(e) => setEditingForm((prev: any) => ({ ...prev, isActive: e.target.checked }))}
+                        className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                      />
+                      <label htmlFor="fIsActive" className="text-gray-300 font-bold cursor-pointer">Activer ce formulaire d'inscription sur le site</label>
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-3 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setEditingForm(null)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold transition-all cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={formSaving}
+                        className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold transition-all cursor-pointer"
+                      >
+                        {formSaving ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Global Backoffice Footer with Win Agro Signature */}
         <footer className="pt-8 mt-12 border-t border-primary-green/10 flex flex-col items-center gap-1.5 pb-6 shrink-0">
           <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
@@ -1492,6 +1901,33 @@ export default function AdminDashboard() {
           </p>
         </footer>
       </main>
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#0F2214] border border-red-950/40 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2.5 text-red-400">
+              <ShieldAlert className="w-5 h-5 shrink-0 animate-pulse" />
+              <h3 className="font-serif text-sm font-bold text-white">{confirmModal.title}</h3>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed font-sans">{confirmModal.message}</p>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

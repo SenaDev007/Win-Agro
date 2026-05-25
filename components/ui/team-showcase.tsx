@@ -88,10 +88,10 @@ export default function TeamShowcase({ members = DEFAULT_MEMBERS }: TeamShowcase
               href={member.social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-black border border-white/10 hover:border-white/20 transition-all duration-300 shadow-md hover:-translate-y-0.5 active:translate-y-0"
+              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#0077B5] hover:bg-[#0077B5]/90 transition-all duration-300 shadow-md hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-white"
             >
-              <span className="text-white text-xs font-sans font-bold">Rejoindre sur</span>
-              <img src="/linkedin_full.jpg" alt="LinkedIn" className="h-4.5 w-auto object-contain" />
+              <FaLinkedinIn className="w-4 h-4 shrink-0" />
+              <span className="text-xs font-sans font-bold">Rejoindre sur LinkedIn</span>
             </a>
           )}
         </div>

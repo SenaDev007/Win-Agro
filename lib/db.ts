@@ -1,4 +1,7 @@
-// Fallback in-memory database for local development to simulate lead accumulation and catalog edits
+import fs from "fs";
+import path from "path";
+
+// Fallback in-memory & file-persisted database for Win Agro
 export interface LeadRecord {
   id: string;
   date: string;
@@ -50,17 +53,38 @@ export interface StatRecord {
   subText: string;
 }
 
-// In-Memory store (persisted for the lifecycle of Next.js dev server, fallback structure)
+export interface FormField {
+  name: string;
+  label: string;
+  type: "text" | "select";
+  options?: string[];
+  required: boolean;
+}
+
+export interface FormConfigRecord {
+  key: string;
+  title: string;
+  heroBgUrl?: string;
+  description: string;
+  fields: FormField[];
+  isActive: boolean;
+}
+
+const STORE_FILE = path.join(process.cwd(), "lib", "db_store.json");
+
 class LocalStore {
   private leads: LeadRecord[] = [];
   private products: CatalogProduct[] = [];
   private testimonials: TestimonialRecord[] = [];
   private services: ServiceRecord[] = [];
   private stats: StatRecord[] = [];
+  private formConfigs: FormConfigRecord[] = [];
   private adminPasswordOverride: string | null = null;
   private adminEmailOverride: string | null = null;
+  private loginAttempts: Record<string, { count: number; lockedUntil: string | null }> = {};
 
   constructor() {
+    // 1. Initialize default/seed data for layout/pages if not loaded from file
     this.stats = [
       {
         id: "s1",
@@ -92,42 +116,8 @@ class LocalStore {
       },
     ];
 
-    this.leads = [
-      {
-        id: "l1",
-        date: "2026-05-25T10:15:30Z",
-        name: "Abdoulaye Sanni",
-        phone: "+22997123456",
-        type: "Formation",
-        location: "Cotonou",
-        details: { "Formation souhaitée": "Élevage Volaille", "Mode d'apprentissage": "Présentiel", "Disponibilité": "Week-ends" },
-        status: "new"
-      },
-      {
-        id: "l2",
-        date: "2026-05-25T08:42:15Z",
-        name: "Pascaline Chabi",
-        phone: "+22966897541",
-        type: "Accompagnement",
-        location: "Parakou",
-        details: { "Type d'élevage": "Lapins", "Expérience": "Débutant", "Besoin principal": "Planification & Budget" },
-        status: "new"
-      },
-      {
-        id: "l3",
-        date: "2026-05-24T15:22:00Z",
-        name: "Romaric Hounkpatin",
-        phone: "+22995324578",
-        type: "Consultation",
-        location: "Porto-Novo",
-        details: { "Problème constaté": "Mortalité élevée", "Type d'élevage": "Volailles", "Urgence": "Urgent" },
-        status: "contacted"
-      }
-    ];
-
     // Seed initial products
     this.products = [
-      // Élevage
       { id: "e1", category: "elevage", name: "Poussins d'1 jour — Coquellets (chair)", description: "Souche adaptée au climat du Bénin, robuste et à croissance rapide.", price: 850, unit: "sujet", isActive: true },
       { id: "e2", category: "elevage", name: "Poussins d'1 jour — Pondeuses", description: "Pondeuses haute performance, démarrage optimal garanti.", price: 950, unit: "sujet", isActive: true },
       { id: "e3", category: "elevage", name: "Pintadeaux", description: "Excellente souche adaptée à l'élevage familial ou commercial.", price: 700, unit: "sujet", isActive: true },
@@ -135,13 +125,13 @@ class LocalStore {
       { id: "e5", category: "elevage", name: "Lapins reproducteurs", description: "Races sélectionnées pour leur prolificité et croissance rapide.", price: 8000, unit: "sujet", isActive: true },
       { id: "e6", category: "elevage", name: "Volailles prêtes à consommer", description: "Volailles vivantes ou abattues proprement selon votre besoin.", price: 3500, unit: "sujet", isActive: true },
       { id: "e7", category: "elevage", name: "Œufs de table frais (plateau)", description: "Collectés chaque matin, fraîcheur garantie.", price: 3000, unit: "plateau 30", isActive: true },
-      // Nutrition
+      
       { id: "n1", category: "nutrition", name: "Provende démarrage (0–3 semaines)", description: "Formule haute densité nutritionnelle pour l'immunité et la croissance initiale.", price: 12500, unit: "sac 25kg", isActive: true },
       { id: "n2", category: "nutrition", name: "Provende croissance (3–6 semaines)", description: "Maintien optimal de la croissance et de la conversion alimentaire.", price: 11000, unit: "sac 25kg", isActive: true },
       { id: "n3", category: "nutrition", name: "Provende finition (>6 semaines)", description: "Formule économique pour la phase finale avant vente.", price: 10500, unit: "sac 25kg", isActive: true },
       { id: "n4", category: "nutrition", name: "Provende pondeuse", description: "Enrichie en calcium pour des œufs solides et une bonne ponte.", price: 12000, unit: "sac 25kg", isActive: true },
       { id: "n5", category: "nutrition", name: "Formulation personnalisée", description: "Consultation + formulation sur mesure selon votre élevage.", price: null, unit: "Sur devis", isActive: true },
-      // Agriculture
+      
       { id: "a1", category: "agriculture", name: "Plants d'eucalyptus (lot 10)", description: "Vigoureux et adaptés au sol béninois. Reboisement ou vente de bois.", price: 2500, unit: "lot 10 plants", isActive: true },
       { id: "a2", category: "agriculture", name: "Plants d'eucalyptus (lot 50)", description: "Tarif dégressif — idéal pour les grandes parcelles.", price: 10000, unit: "lot 50 plants", isActive: true },
       { id: "a3", category: "agriculture", name: "Plants d'eucalyptus (lot 100)", description: "Meilleur rapport qualité-prix pour projets de reboisement.", price: 18000, unit: "lot 100 plants", isActive: true },
@@ -188,59 +178,145 @@ class LocalStore {
       }
     ];
 
-    // Seed services
+    // Seed default service packages
     this.services = [
       {
         key: "formation_elevage",
-        title: "Formation Pratique",
-        hook: "La plupart des formations t'apprennent à prendre des notes. La nôtre t'apprend à ne pas perdre tes animaux.",
-        problem: "Beaucoup de cours sont déconnectés de la réalité du terrain béninois. Tu sors diplômé, mais quand la mortalité frappe ta bande, tu es désarmé.",
+        title: "Formations Élevage Pro",
+        hook: "Ne perds plus ton temps à improviser.",
+        problem: "La plupart des formations t'apprennent la théorie. Chez Win Agro, nous transmettons la réalité brute du terrain avec des ateliers à Porto-Novo (Parakou auparavant) et en ligne.",
         bullets: [
-          "Élevage de volaille complet (chairs, pondeuses, goliaths, pintades, dindes, cailles)",
-          "Élevage professionnel de lapins (cuniculiculture)",
-          "Élevage porcin rentable",
-          "Formulation de nutrition animale",
-          "Transformation agro-alimentaire locale"
+          "Élevage complet de Volailles & Lapins",
+          "Fabrication d'aliments (provenderie)",
+          "Formules de phytothérapie naturelle",
+          "Gestion financière & rentabilité"
         ],
-        availability: "Disponible en présentiel & en ligne · Adapté au climat africain",
+        availability: "Disponible en présentiel & en ligne",
         cta: "Je veux me former →",
         isPremium: false,
         isActive: true
       },
       {
-        key: "installation_ferme",
-        title: "Accompagnement & Installation de Ferme",
-        hook: "Tu arrives avec une idée en tête. Tu repars avec une exploitation agricole qui tourne.",
-        problem: "Tu as un projet d'élevage ou un terrain disponible, mais tu manques de repères pour démarrer et tu ne veux pas gaspiller tes économies.",
+        key: "accompagnement_projet",
+        title: "Accompagnement Clé en Main",
+        hook: "Ton projet, de l'idée jusqu'au premier profit.",
+        problem: "Construire un bâtiment inadapté ou acheter des intrants trop chers peut ruiner ton projet d'élevage avant même qu'il ne démarre. Nous planifions, installons et gérons ta ferme.",
         bullets: [
-          "Étude de faisabilité et plan d'affaires terrain",
-          "Installation complète de tes bâtiments et équipements",
-          "Suivi technique rigoureux post-installation",
-          "Encadrement et formation de tes employés sur place"
+          "Étude de faisabilité technique & financière",
+          "Supervision de la construction des poulaillers",
+          "Suivi quotidien de ta première bande",
+          "Mise en relation avec notre réseau de vente"
         ],
-        availability: "Accompagnement clé en main de A à Z par Victoire et ses équipes",
-        cta: "Lancer mon projet →",
+        availability: "Disponible sur toute l'étendue du Bénin",
+        cta: "Lancer mon élevage →",
         isPremium: true,
         isActive: true
       },
       {
-        key: "consultation",
+        key: "diagnostic_consultation",
         title: "Consultation & Diagnostic",
-        hook: "Ta ferme tourne déjà, mais les résultats ne suivent pas. On va trouver pourquoi.",
-        problem: "Tu investis ton temps et ton argent mais tes marges restent faibles, ou tu fais face à des vagues de pertes inexpliquées.",
+        hook: "Un problème d'élevage à résoudre immédiatement ?",
+        problem: "Mortalité inexpliquée, ponte faible, provende inefficace... Chaque jour d'attente te coûte des centaines de mille. Nous intervenons en urgence pour redresser la barre.",
         bullets: [
-          "Audit complet et diagnostic des blocages terrain",
-          "Résolution des problèmes sanitaires et techniques",
-          "Optimisation de tes performances d'alimentation"
+          "Analyse de biosécurité & d'aération",
+          "Ajustement des rations alimentaires",
+          "Audit de prophylaxie & traitements bio",
+          "Rapport de recommandations exploitables"
         ],
-        availability: "Intervention rapide, conseils actionnables, résultats garantis",
-        cta: "Demander une consultation →",
+        availability: "Déplacement sur site ou télé-diagnostic",
+        cta: "Demander un diagnostic →",
         isPremium: false,
         isActive: true
       }
     ];
+
+    // Seed default form configurations
+    this.formConfigs = [
+      {
+        key: "accompagnement",
+        title: "Votre projet d'élevage",
+        heroBgUrl: "/lead_accompagnement.png",
+        description: "Installation de ferme, suivi technique, conseils personnalisés",
+        isActive: true,
+        fields: [
+          { name: "typeElevage", label: "Type d'élevage envisagé", type: "select", options: ["Poulets de chair", "Pondeuses", "Pintades", "Cailles", "Lapins", "Porcs", "Autre"], required: true },
+          { name: "experience", label: "Niveau d'expérience", type: "select", options: ["Débutant complet", "J'ai déjà essayé", "J'ai une ferme active"], required: true },
+          { name: "besoin", label: "Besoin principal", type: "select", options: ["Installation de ferme", "Accompagnement technique", "Financement de projet", "Formation + suivi", "Autre"], required: true },
+          { name: "budget", label: "Budget estimé (FCFA)", type: "select", options: ["Moins de 500 000 FCFA", "500 000 – 2 000 000 FCFA", "Plus de 2 000 000 FCFA", "Je ne sais pas encore"], required: false }
+        ]
+      },
+      {
+        key: "formation",
+        title: "Inscription à la formation",
+        heroBgUrl: "/lead_formation.png",
+        description: "Volailles, lapins, porcs, nutrition animale, transformation",
+        isActive: true,
+        fields: [
+          { name: "formationSouhaitee", label: "Formation souhaitée", type: "select", options: ["Élevage de volailles", "Élevage de lapins", "Élevage de porcs", "Nutrition animale", "Transformation de produits", "Autre"], required: true },
+          { name: "modePreferee", label: "Mode préféré", type: "select", options: ["Présentiel", "En ligne", "Les deux"], required: true },
+          { name: "disponibilite", label: "Disponibilité", type: "select", options: ["En semaine", "Le weekend", "Flexible"], required: true }
+        ]
+      },
+      {
+        key: "consultation",
+        title: "Consultation & Diagnostic",
+        heroBgUrl: "/lead_consultation.png",
+        description: "Audit, résolution de problèmes, optimisation des performances",
+        isActive: true,
+        fields: [
+          { name: "typeElevageActuel", label: "Type d'élevage actuel", type: "select", options: ["Volailles (chair / pondeuses)", "Pintades / Cailles", "Lapins", "Porcs", "Élevage mixte", "Autre"], required: true },
+          { name: "problemePrincipal", label: "Problème principal constaté", type: "select", options: ["Mortalité élevée", "Faible productivité / croissance lente", "Maladies récurrentes", "Alimentation inadaptée", "Rentabilité insuffisante", "Autre"], required: true },
+          { name: "depuisCombienDeTemps", label: "Depuis combien de temps ?", type: "select", options: ["Moins d'1 mois", "1 à 3 mois", "Plus de 3 mois"], required: true },
+          { name: "urgence", label: "Niveau d'urgence", type: "select", options: ["Urgent — cette semaine", "Dans le mois", "Pas encore urgent"], required: true }
+        ]
+      }
+    ];
+
+    // Leads start mock-free and completely blank
+    this.leads = [];
+
+    // Load from local store file if exists
+    this.loadFromFile();
   }
 
+  private saveToFile() {
+    try {
+      const data = {
+        leads: this.leads,
+        products: this.products,
+        testimonials: this.testimonials,
+        services: this.services,
+        stats: this.stats,
+        formConfigs: this.formConfigs,
+        adminEmailOverride: this.adminEmailOverride,
+        adminPasswordOverride: this.adminPasswordOverride
+      };
+      fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
+    } catch (err) {
+      console.error("Error saving database to file:", err);
+    }
+  }
+
+  private loadFromFile() {
+    try {
+      if (fs.existsSync(STORE_FILE)) {
+        const fileContent = fs.readFileSync(STORE_FILE, "utf-8");
+        const data = JSON.parse(fileContent);
+        if (data.leads) this.leads = data.leads;
+        if (data.products) this.products = data.products;
+        if (data.testimonials) this.testimonials = data.testimonials;
+        if (data.services) this.services = data.services;
+        if (data.stats) this.stats = data.stats;
+        if (data.formConfigs) this.formConfigs = data.formConfigs;
+        if (data.adminEmailOverride) this.adminEmailOverride = data.adminEmailOverride;
+        if (data.adminPasswordOverride) this.adminPasswordOverride = data.adminPasswordOverride;
+      }
+    } catch (err) {
+      console.error("Error loading database from file:", err);
+    }
+  }
+
+  // --- Leads CRUD ---
   getLeads() {
     return this.leads;
   }
@@ -248,31 +324,46 @@ class LocalStore {
   addLead(lead: Omit<LeadRecord, "id" | "date" | "status">) {
     const newLead: LeadRecord = {
       ...lead,
-      id: "l" + (this.leads.length + 1),
+      id: "l_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
       date: new Date().toISOString(),
       status: "new"
     };
-    this.leads.unshift(newLead);
+    this.leads.push(newLead);
+    this.saveToFile();
     return newLead;
   }
 
-  updateLeadStatus(id: string, status: "new" | "contacted" | "archived") {
+  updateLeadStatus(id: string, status: LeadRecord["status"]) {
     const index = this.leads.findIndex(l => l.id === id);
     if (index !== -1) {
       this.leads[index].status = status;
+      this.saveToFile();
       return true;
     }
     return false;
   }
 
+  // --- Catalog CRUD ---
   getProducts() {
     return this.products;
+  }
+
+  updateProductPriceAndStatus(id: string, price: number | null, isActive: boolean) {
+    const index = this.products.findIndex(p => p.id === id);
+    if (index !== -1) {
+      this.products[index].price = price;
+      this.products[index].isActive = isActive;
+      this.saveToFile();
+      return true;
+    }
+    return false;
   }
 
   updateProductPrice(id: string, price: number | null) {
     const index = this.products.findIndex(p => p.id === id);
     if (index !== -1) {
       this.products[index].price = price;
+      this.saveToFile();
       return true;
     }
     return false;
@@ -282,26 +373,20 @@ class LocalStore {
     const index = this.products.findIndex(p => p.id === id);
     if (index !== -1) {
       this.products[index].isActive = isActive;
+      this.saveToFile();
       return true;
     }
     return false;
   }
 
-  addProduct(product: Omit<CatalogProduct, "id">) {
-    const newProduct: CatalogProduct = {
-      ...product,
-      id: "p" + (this.products.length + 1)
-    };
-    this.products.push(newProduct);
-    return newProduct;
-  }
-
+  // --- Admin credentials ---
   getAdminPassword() {
     return this.adminPasswordOverride;
   }
 
   setAdminPassword(password: string) {
     this.adminPasswordOverride = password;
+    this.saveToFile();
   }
 
   getAdminEmail() {
@@ -310,6 +395,7 @@ class LocalStore {
 
   setAdminEmail(email: string) {
     this.adminEmailOverride = email;
+    this.saveToFile();
   }
 
   // --- Testimonials CRUD ---
@@ -323,6 +409,7 @@ class LocalStore {
       id: "t" + (this.testimonials.length + 1)
     };
     this.testimonials.push(newT);
+    this.saveToFile();
     return newT;
   }
 
@@ -330,6 +417,7 @@ class LocalStore {
     const index = this.testimonials.findIndex(item => item.id === t.id);
     if (index !== -1) {
       this.testimonials[index] = { ...this.testimonials[index], ...t };
+      this.saveToFile();
       return true;
     }
     return false;
@@ -339,6 +427,7 @@ class LocalStore {
     const index = this.testimonials.findIndex(item => item.id === id);
     if (index !== -1) {
       this.testimonials.splice(index, 1);
+      this.saveToFile();
       return true;
     }
     return false;
@@ -356,6 +445,7 @@ class LocalStore {
       key
     };
     this.services.push(newS);
+    this.saveToFile();
     return newS;
   }
 
@@ -363,6 +453,7 @@ class LocalStore {
     const index = this.services.findIndex(item => item.key === s.key);
     if (index !== -1) {
       this.services[index] = { ...this.services[index], ...s };
+      this.saveToFile();
       return true;
     }
     return false;
@@ -372,6 +463,7 @@ class LocalStore {
     const index = this.services.findIndex(item => item.key === key);
     if (index !== -1) {
       this.services.splice(index, 1);
+      this.saveToFile();
       return true;
     }
     return false;
@@ -386,14 +478,48 @@ class LocalStore {
     const index = this.stats.findIndex(item => item.id === s.id);
     if (index !== -1) {
       this.stats[index] = { ...this.stats[index], ...s };
+      this.saveToFile();
+      return true;
+    }
+    return false;
+  }
+
+  // --- Form configs CRUD ---
+  getFormConfigs() {
+    return this.formConfigs;
+  }
+
+  addFormConfig(config: FormConfigRecord) {
+    const index = this.formConfigs.findIndex(f => f.key === config.key);
+    if (index === -1) {
+      this.formConfigs.push(config);
+      this.saveToFile();
+      return true;
+    }
+    return false;
+  }
+
+  updateFormConfig(config: FormConfigRecord) {
+    const index = this.formConfigs.findIndex(f => f.key === config.key);
+    if (index !== -1) {
+      this.formConfigs[index] = { ...config };
+      this.saveToFile();
+      return true;
+    }
+    return false;
+  }
+
+  deleteFormConfig(key: string) {
+    const index = this.formConfigs.findIndex(f => f.key === key);
+    if (index !== -1) {
+      this.formConfigs.splice(index, 1);
+      this.saveToFile();
       return true;
     }
     return false;
   }
 
   // --- Brute Force Protection (IP Lockout) ---
-  private loginAttempts: Record<string, { count: number; lockedUntil: string | null }> = {};
-
   trackLoginAttempt(ip: string, success: boolean) {
     if (!this.loginAttempts[ip]) {
       this.loginAttempts[ip] = { count: 0, lockedUntil: null };

@@ -52,9 +52,9 @@ const data = {
     chat: 'https://wa.me/2290161336548?text=' + encodeURIComponent("Bonjour Victoire, j'ai une question concernant les formations ou installations de ferme Win Agro."),
   },
   contact: {
-    email: 'contact@winagro.bj',
+    email: 'contact@winagrotech.com',
     phone: '+229 0161336548',
-    address: 'Cotonou, République du Bénin',
+    address: 'Porto-Novo, Bénin',
   },
   company: {
     name: 'Win Agro',
@@ -302,11 +302,11 @@ export default function Footer4Col() {
               <p>&copy; {currentYear} {data.company.name}. Tous droits réservés.</p>
               <div className="hidden sm:inline text-primary-green/30">|</div>
               <div className="flex gap-3">
-                <a href="#contact" onClick={(e) => handleLinkClick(e, "#contact")} className="hover:text-accent-yellow transition-colors flex items-center gap-1">
+                <a href="/confidentialite" className="hover:text-accent-yellow transition-colors flex items-center gap-1 cursor-pointer">
                   <ShieldCheck className="w-3.5 h-3.5" /> Confidentialité
                 </a>
                 <span className="text-primary-green/30">·</span>
-                <a href="#contact" onClick={(e) => handleLinkClick(e, "#contact")} className="hover:text-accent-yellow transition-colors flex items-center gap-1">
+                <a href="/mentions-legales" className="hover:text-accent-yellow transition-colors flex items-center gap-1 cursor-pointer">
                   <FileText className="w-3.5 h-3.5" /> Mentions Légales
                 </a>
               </div>

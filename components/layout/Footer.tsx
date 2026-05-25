@@ -165,15 +165,15 @@ export default function Footer() {
               <li className="flex items-center gap-3">
                 <span className="text-accent-yellow">✉️</span>
                 <a
-                  href="mailto:contact@winagro.bj"
+                  href="mailto:contact@winagrotech.com"
                   className="hover:text-accent-yellow transition-colors"
                 >
-                  contact@winagro.bj
+                  contact@winagrotech.com
                 </a>
               </li>
               <li className="flex items-center gap-3 text-xs text-gray-400">
                 <span className="text-primary-green">📍</span>
-                <span>Cotonou, République du Bénin</span>
+                <span>Porto-Novo, Bénin</span>
               </li>
               <li className="pt-4 border-t border-primary-green/10">
                 <p className="text-xs text-gray-400 font-sans uppercase font-bold tracking-wider mb-3">
@@ -233,11 +233,11 @@ export default function Footer() {
             </a>
           </p>
           <div className="flex gap-4 font-sans">
-            <a href="#contact" className="hover:text-accent-yellow transition-colors">
+            <a href="/confidentialite" className="hover:text-accent-yellow transition-colors cursor-pointer">
               Politique de confidentialité
             </a>
             <span>·</span>
-            <a href="#contact" className="hover:text-accent-yellow transition-colors">
+            <a href="/mentions-legales" className="hover:text-accent-yellow transition-colors cursor-pointer">
               Mentions légales
             </a>
           </div>

@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { leadFormSchema, modalLeadSchema, serviceLabels } from "@/lib/validations";
+import { leadFormSchema, serviceLabels } from "@/lib/validations";
+import { localStore } from "@/lib/db";
 
 // Initialize Resend with API Key (if provided in environment variables)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const notificationEmail = process.env.NOTIFICATION_EMAIL || "contact@winagro.bj";
+const notificationEmail = process.env.NOTIFICATION_EMAIL || "contact@winagrotech.com";
+
+function sanitize(str: any): string {
+  if (typeof str !== "string") return "";
+  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+}
 
 export async function POST(request: Request) {
   try {
@@ -14,163 +20,73 @@ export async function POST(request: Request) {
     const isModalForm = body && typeof body === "object" && "type" in body;
 
     if (isModalForm) {
-      // 1. Server-side Validation for Modal Leads
-      const validation = modalLeadSchema.safeParse(body);
-      if (!validation.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            errors: validation.error.flatten().fieldErrors,
-          },
-          { status: 400 }
-        );
+      const { type, prenom, nom, whatsapp, ville } = body;
+      const cleanType = sanitize(type);
+      const cleanPrenom = sanitize(prenom);
+      const cleanNom = sanitize(nom);
+      const cleanWhatsapp = sanitize(whatsapp);
+      const cleanVille = sanitize(ville);
+
+      if (!cleanType || !cleanPrenom || !cleanNom || !cleanWhatsapp || !cleanVille) {
+        return NextResponse.json({ success: false, message: "Informations requises manquantes" }, { status: 400 });
       }
 
-      const data = validation.data;
-      const { prenom, nom, whatsapp, ville, type } = data;
-      const typeLabel = type === "accompagnement" ? "Accompagnement Projet" : type === "formation" ? "Inscription Formation" : "Consultation & Diagnostic";
+      // Fetch dynamic form configuration
+      const config = localStore.getFormConfigs().find(f => f.key === cleanType);
+      if (!config) {
+        return NextResponse.json({ success: false, message: "Formulaire inconnu" }, { status: 400 });
+      }
 
-      console.log(`🌱 Lead reçu de type [${typeLabel}] :`, { prenom, nom, whatsapp, ville });
-
-      // Save to local in-memory DB for backoffice visibility
-      try {
-        const { localStore } = require("@/lib/db");
-        const detailsObj: Record<string, string> = {};
-        if (type === "accompagnement") {
-          detailsObj["Type d'élevage"] = (data as any).typeElevage;
-          detailsObj["Expérience"] = (data as any).experience;
-          detailsObj["Besoin"] = (data as any).besoin;
-          detailsObj["Budget"] = (data as any).budget || "Non spécifié";
-        } else if (type === "formation") {
-          detailsObj["Formation"] = (data as any).formationSouhaitee;
-          detailsObj["Mode préféré"] = (data as any).modePreferee;
-          detailsObj["Disponibilité"] = (data as any).disponibilite;
-        } else if (type === "consultation") {
-          detailsObj["Élevage actuel"] = (data as any).typeElevageActuel;
-          detailsObj["Problème"] = (data as any).problemePrincipal;
-          detailsObj["Durée"] = (data as any).depuisCombienDeTemps;
-          detailsObj["Urgence"] = (data as any).urgence;
+      // Dynamically validate and extract extra fields from the config definition
+      const detailsObj: Record<string, string> = {};
+      for (const field of config.fields) {
+        const val = body[field.name];
+        if (field.required && !val) {
+          return NextResponse.json({ success: false, message: `Le champ "${field.label}" est obligatoire.` }, { status: 400 });
         }
-
-        localStore.addLead({
-          name: `${prenom} ${nom}`,
-          phone: whatsapp,
-          type: typeLabel,
-          location: ville,
-          details: detailsObj
-        });
-      } catch (dbErr) {
-        console.error("❌ Failed to log lead to in-memory store:", dbErr);
+        if (val !== undefined) {
+          detailsObj[field.label] = sanitize(String(val));
+        }
       }
 
+      // Log lead to database
+      const typeLabel = config.title;
+      const newLead = localStore.addLead({
+        name: `${cleanPrenom} ${cleanNom}`,
+        phone: cleanWhatsapp,
+        type: typeLabel,
+        location: cleanVille,
+        details: detailsObj
+      });
+
+      // Construct dynamic message copy
       let htmlDetails = "";
-      let emailSubject = "";
-      let whatsappMessage = "";
+      let whatsappMessage = `Bonjour Victoire,
+ 
+Je m'appelle ${cleanPrenom} ${cleanNom}. Je souhaite vous contacter au sujet de : ${config.title}.
+ 
+Voici mes coordonnées :
+- Localisation : ${cleanVille}
+- WhatsApp : ${cleanWhatsapp}`;
 
-      if (type === "accompagnement") {
-        const { typeElevage, experience, besoin, budget } = data;
-        emailSubject = `🌾 Projet d'Élevage [Accompagnement] — ${prenom} ${nom}`;
-        htmlDetails = `
+      for (const [label, val] of Object.entries(detailsObj)) {
+        htmlDetails += `
           <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Type d'élevage</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${typeElevage}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Expérience</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${experience}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Besoin principal</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${besoin}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Budget estimé</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${budget || "Non spécifié"}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">${label}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${val}</td>
           </tr>
         `;
-
-        whatsappMessage = `Bonjour Victoire,
-
-Je m'appelle ${prenom} ${nom}. Je souhaite être accompagné(e) sur mon projet d'élevage au Bénin.
-
-Voici mes informations :
-- Type d'élevage : ${typeElevage}
-- Niveau d'expérience : ${experience}
-- Besoin principal : ${besoin}
-- Mon budget : ${budget || "Non spécifié"}
-- Localisation : ${ville}
-- WhatsApp : ${whatsapp}`;
-      } else if (type === "consultation") {
-        const { typeElevageActuel, problemePrincipal, depuisCombienDeTemps, urgence } = data;
-        emailSubject = `🔍 Consultation & Diagnostic — ${prenom} ${nom}`;
-        htmlDetails = `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Type d'élevage actuel</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${typeElevageActuel}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Problème principal</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${problemePrincipal}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Depuis combien de temps</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${depuisCombienDeTemps}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Urgence</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; color: #dc2626; font-weight: bold;">${urgence}</td>
-          </tr>
-        `;
-
-        whatsappMessage = `Bonjour Victoire,
-
-Je m'appelle ${prenom} ${nom}. Je souhaite une consultation et un diagnostic de ma ferme.
-
-Voici ma situation :
-- Type d'élevage : ${typeElevageActuel}
-- Problème principal : ${problemePrincipal}
-- Depuis : ${depuisCombienDeTemps}
-- Urgence : ${urgence}
-- Localisation : ${ville}
-- WhatsApp : ${whatsapp}
-
-J'attends votre contact pour la suite. Merci !`;
-      } else {
-        const { formationSouhaitee, modePreferee, disponibilite } = data;
-        emailSubject = `📚 Inscription Formation [${formationSouhaitee}] — ${prenom} ${nom}`;
-        htmlDetails = `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Formation souhaitée</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${formationSouhaitee}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Mode préféré</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${modePreferee}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Disponibilité</td>
-            <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${disponibilite}</td>
-          </tr>
-        `;
-
-        whatsappMessage = `Bonjour Victoire,
-
-Je m'appelle ${prenom} ${nom}. Je souhaite m'inscrire à une formation en élevage agricole chez Win Agro.
-
-Voici mes informations :
-- Formation souhaitée : ${formationSouhaitee}
-- Mode d'apprentissage : ${modePreferee}
-- Disponibilité : ${disponibilite}
-- Localisation : ${ville}
-- WhatsApp : ${whatsapp}`;
+        whatsappMessage += `\n- ${label} : ${val}`;
       }
+
+      const emailSubject = `🌱 ${config.title} — ${cleanPrenom} ${cleanNom}`;
 
       // Send email via Resend
       let emailSent = false;
       if (resend) {
         try {
           const emailResult = await resend.emails.send({
-            from: "Win Agro Site <noreply@winagro.bj>",
+            from: "Win Agro Site <noreply@winagrotech.com>",
             to: [notificationEmail],
             subject: emailSubject,
             html: `
@@ -185,19 +101,19 @@ Voici mes informations :
                   </tr>
                   <tr>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Prénom & Nom</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${prenom} ${nom}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanPrenom} ${cleanNom}</td>
                   </tr>
                   <tr>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">WhatsApp / Tél</td>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
-                      <a href="tel:${whatsapp}" style="color: #098947; font-weight: bold; text-decoration: none;">${whatsapp}</a>
+                      <a href="tel:${cleanWhatsapp}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanWhatsapp}</a>
                       | 
-                      <a href="https://wa.me/${whatsapp.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                      <a href="https://wa.me/${cleanWhatsapp.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Localisation / Ville</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${ville}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanVille}</td>
                   </tr>
                   ${htmlDetails}
                 </table>
@@ -208,7 +124,7 @@ Voici mes informations :
                 </div>
                 
                 <footer style="margin-top: 40px; font-size: 12px; color: #7A7A7A; text-align: center; border-top: 1px solid #E6F4EC; padding-top: 15px;">
-                  © 2025 Win Agro Agri Tech Solutions. Tous droits réservés.
+                  © 2026 Win Agro Agri Tech Solutions. Tous droits réservés.
                 </footer>
               </div>
             `,
@@ -217,19 +133,17 @@ Voici mes informations :
         } catch (emailError) {
           console.error("❌ Erreur lors de l'envoi de l'email via Resend :", emailError);
         }
-      } else {
-        console.warn("⚠️ Resend API Key non configurée. Email de notification ignoré (mode dev).");
       }
 
       return NextResponse.json({
         success: true,
         message: "Victoire vous recontacte dans les 24h.",
         data: {
-          prenom,
-          nom,
-          whatsapp,
-          ville,
-          type,
+          prenom: cleanPrenom,
+          nom: cleanNom,
+          whatsapp: cleanWhatsapp,
+          ville: cleanVille,
+          type: cleanType,
           whatsappUrl: `https://wa.me/2290161336548?text=${encodeURIComponent(whatsappMessage)}`,
           emailNotificationSent: emailSent,
         },
@@ -250,33 +164,30 @@ Voici mes informations :
 
     const { fullName, phone, service, message } = validation.data;
     const serviceLabel = serviceLabels[service];
+    const cleanFullName = sanitize(fullName);
+    const cleanPhone = sanitize(phone);
+    const cleanMessage = sanitize(message || "");
 
-    console.log("🌱 Lead reçu (Classique) :", { fullName, phone, service: serviceLabel, message });
+    console.log("🌱 Lead reçu (Classique) :", { cleanFullName, cleanPhone, service: serviceLabel, cleanMessage });
 
-    // Save to local in-memory DB for backoffice visibility
-    try {
-      const { localStore } = require("@/lib/db");
-      localStore.addLead({
-        name: fullName,
-        phone: phone,
-        type: "Contact Standard",
-        location: "Non spécifiée",
-        details: {
-          "Service demandé": serviceLabel,
-          "Message": message || "Aucun message"
-        }
-      });
-    } catch (dbErr) {
-      console.error("❌ Failed to log classic lead to in-memory store:", dbErr);
-    }
+    localStore.addLead({
+      name: cleanFullName,
+      phone: cleanPhone,
+      type: "Contact Standard",
+      location: "Non spécifiée",
+      details: {
+        "Service demandé": serviceLabel,
+        "Message": cleanMessage || "Aucun message"
+      }
+    });
 
     let emailSent = false;
     if (resend) {
       try {
         const emailResult = await resend.emails.send({
-          from: "Win Agro Site <noreply@winagro.bj>",
+          from: "Win Agro Site <noreply@winagrotech.com>",
           to: [notificationEmail],
-          subject: `🌱 Nouveau lead Win Agro — ${serviceLabel} — ${fullName}`,
+          subject: `🌱 Nouveau lead Win Agro — ${serviceLabel} — ${cleanFullName}`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #4A4A4A; max-width: 600px; border: 1px solid #E6F4EC; border-radius: 8px; background-color: #FAFAF3;">
               <h2 style="color: #076B37; border-bottom: 2px solid #098947; padding-bottom: 10px;">Nouveau Contact Win Agro</h2>
@@ -289,14 +200,14 @@ Voici mes informations :
                 </tr>
                 <tr>
                   <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Nom complet</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${fullName}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanFullName}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">WhatsApp / Tél</td>
                   <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
-                    <a href="tel:${phone}" style="color: #098947; font-weight: bold; text-decoration: none;">${phone}</a>
+                    <a href="tel:${cleanPhone}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanPhone}</a>
                     | 
-                    <a href="https://wa.me/${phone.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                    <a href="https://wa.me/${cleanPhone.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
                   </td>
                 </tr>
                 <tr>
@@ -305,7 +216,7 @@ Voici mes informations :
                 </tr>
                 <tr>
                   <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Message</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-style: italic;">${message || "Aucun message fourni"}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-style: italic;">${cleanMessage || "Aucun message fourni"}</td>
                 </tr>
               </table>
               
@@ -315,7 +226,7 @@ Voici mes informations :
               </div>
               
               <footer style="margin-top: 40px; font-size: 12px; color: #7A7A7A; text-align: center; border-top: 1px solid #E6F4EC; padding-top: 15px;">
-                © 2025 Win Agro Agri Tech Solutions. Tous droits réservés.
+                © 2026 Win Agro Agri Tech Solutions. Tous droits réservés.
               </footer>
             </div>
           `,
@@ -324,19 +235,17 @@ Voici mes informations :
       } catch (emailError) {
         console.error("❌ Erreur lors de l'envoi de l'email via Resend :", emailError);
       }
-    } else {
-      console.warn("⚠️ Resend API Key non configurée. Email de notification ignoré (mode dev).");
     }
 
     return NextResponse.json({
       success: true,
       message: "Reçu ✓ Victoire te contacte dans les 24h.",
       data: {
-        fullName,
-        phone,
+        fullName: cleanFullName,
+        phone: cleanPhone,
         service: serviceLabel,
         rawService: service,
-        messageContent: message || "",
+        messageContent: cleanMessage || "",
         emailNotificationSent: emailSent,
       },
     });
