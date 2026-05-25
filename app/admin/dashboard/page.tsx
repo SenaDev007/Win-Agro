@@ -82,7 +82,8 @@ export default function AdminDashboard() {
     cta: "",
     isPremium: false,
     isActive: true,
-    isNew: true
+    isNew: true,
+    formKey: ""
   });
   const [sSaving, setSSaving] = useState(false);
   const [sError, setSError] = useState("");
@@ -348,7 +349,8 @@ export default function AdminDashboard() {
         cta: s.cta,
         isPremium: s.isPremium,
         isActive: s.isActive,
-        isNew: false
+        isNew: false,
+        formKey: s.formKey || ""
       });
     } else {
       setServiceForm({
@@ -362,7 +364,8 @@ export default function AdminDashboard() {
         cta: "",
         isPremium: false,
         isActive: true,
-        isNew: true
+        isNew: true,
+        formKey: ""
       });
     }
     setSError("");
@@ -1452,6 +1455,21 @@ export default function AdminDashboard() {
                           className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Formulaire d'inscription à lier</label>
+                      <select
+                        value={serviceForm.formKey}
+                        onChange={(e) => setServiceForm(prev => ({ ...prev, formKey: e.target.value }))}
+                        className="w-full px-3 py-2 bg-[#0F2214] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                      >
+                        <option value="">Formulaire par défaut (Selon la clé du service)</option>
+                        {formConfigs.map(f => (
+                          <option key={f.key} value={f.key}>{f.title} ({f.key})</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Associez un parcours d'inscription personnalisé à ce service pour vos clients.</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

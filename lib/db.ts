@@ -43,6 +43,7 @@ export interface ServiceRecord {
   cta: string;
   isPremium: boolean;
   isActive: boolean;
+  formKey?: string;
 }
 
 export interface StatRecord {
@@ -194,7 +195,8 @@ class LocalStore {
         availability: "Disponible en présentiel & en ligne",
         cta: "Je veux me former →",
         isPremium: false,
-        isActive: true
+        isActive: true,
+        formKey: "formation"
       },
       {
         key: "accompagnement_projet",
@@ -210,7 +212,8 @@ class LocalStore {
         availability: "Disponible sur toute l'étendue du Bénin",
         cta: "Lancer mon élevage →",
         isPremium: true,
-        isActive: true
+        isActive: true,
+        formKey: "accompagnement"
       },
       {
         key: "diagnostic_consultation",
@@ -226,7 +229,8 @@ class LocalStore {
         availability: "Déplacement sur site ou télé-diagnostic",
         cta: "Demander un diagnostic →",
         isPremium: false,
-        isActive: true
+        isActive: true,
+        formKey: "consultation"
       }
     ];
 

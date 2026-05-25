@@ -11,19 +11,25 @@ interface ServicesProps {
 
 export default function Services({ onSelectService }: ServicesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalPath, setModalPath] = useState<"accompagnement" | "formation" | "consultation" | null>(null);
+  const [modalPath, setModalPath] = useState<string | null>(null);
 
   const handleServiceClick = (serviceKey: string) => {
     // 1. Trigger service selection state for compatibility with bottom form
     onSelectService(serviceKey);
 
-    // 2. Open the LeadModal with adapted path
-    if (serviceKey === "formation_elevage") {
-      setModalPath("formation");
-    } else if (serviceKey === "consultation") {
-      setModalPath("consultation");
+    // 2. Find service object to retrieve dynamic formKey
+    const service = servicesList.find(s => s.key === serviceKey);
+    if (service && service.formKey) {
+      setModalPath(service.formKey);
     } else {
-      setModalPath("accompagnement");
+      // fallback
+      if (serviceKey === "formation_elevage" || serviceKey === "formation") {
+        setModalPath("formation");
+      } else if (serviceKey === "consultation" || serviceKey === "diagnostic_consultation") {
+        setModalPath("consultation");
+      } else {
+        setModalPath("accompagnement");
+      }
     }
     setIsModalOpen(true);
   };

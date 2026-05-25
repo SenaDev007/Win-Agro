@@ -29,13 +29,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { key, title, hook, problem, bullets, availability, cta, isPremium, isActive, isNew } = body;
+    const { key, title, hook, problem, bullets, availability, cta, isPremium, isActive, isNew, formKey } = body;
 
     const cleanTitle = sanitize(title);
     const cleanHook = sanitize(hook);
     const cleanProblem = sanitize(problem);
     const cleanAvailability = sanitize(availability);
     const cleanCta = sanitize(cta);
+    const cleanFormKey = sanitize(formKey);
     
     let cleanBullets: string[] = [];
     if (Array.isArray(bullets)) {
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
         availability: cleanAvailability,
         cta: cleanCta,
         isPremium: !!isPremium,
-        isActive: !!isActive
+        isActive: !!isActive,
+        formKey: cleanFormKey || undefined
       });
       if (success) {
         return NextResponse.json({ success: true });
@@ -76,7 +78,8 @@ export async function POST(request: Request) {
         availability: cleanAvailability,
         cta: cleanCta,
         isPremium: !!isPremium,
-        isActive: isActive !== undefined ? !!isActive : true
+        isActive: isActive !== undefined ? !!isActive : true,
+        formKey: cleanFormKey || undefined
       });
       return NextResponse.json({ success: true, service: newS });
     }
