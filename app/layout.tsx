@@ -23,12 +23,12 @@ export const metadata: Metadata = {
   title: "Élevage au Bénin — Formation, Installation, Vente | Win Agro Agri Tech",
   description: "Win Agro Agri Tech Solutions t'accompagne dans ton projet d'élevage au Bénin. Formation pratique, installation de ferme, vente de volailles et provendes. Victoire AHOGNON, experte terrain.",
   alternates: {
-    canonical: "https://winagro.bj",
+    canonical: "https://winagrotech.com",
   },
   openGraph: {
     title: "Win Agro Agri Tech Solutions — Formation & Élevage au Bénin",
     description: "Formations pratiques, installation de ferme et vente d'animaux sélectionnés. Victoire AHOGNON t'accompagne jusqu'aux résultats.",
-    url: "https://winagro.bj",
+    url: "https://winagrotech.com",
     siteName: "Win Agro Agri Tech",
     locale: "fr_BJ",
     type: "website",
@@ -66,10 +66,10 @@ export default function RootLayout({
               "@graph": [
                 {
                   "@type": ["LocalBusiness", "AgricultureBusiness"],
-                  "@id": "https://winagro.bj/#business",
+                  "@id": "https://winagrotech.com/#business",
                   "name": "Win Agro Agri Tech Solutions",
                   "description": "Formation agricole, élevage, vente de volailles, provendes et installation de fermes au Bénin. Méthodes 100% naturelles.",
-                  "url": "https://winagro.bj",
+                  "url": "https://winagrotech.com",
                   "telephone": "+2290161336548",
                   "email": "contact@winagro.bj",
                   "foundingDate": "2020",
@@ -140,12 +140,12 @@ export default function RootLayout({
                 },
                 {
                   "@type": "WebSite",
-                  "@id": "https://winagro.bj/#website",
-                  "url": "https://winagro.bj",
+                  "@id": "https://winagrotech.com/#website",
+                  "url": "https://winagrotech.com",
                   "name": "Win Agro Agri Tech Solutions",
                   "potentialAction": {
                     "@type": "SearchAction",
-                    "target": "https://winagro.bj/?s={search_term_string}",
+                    "target": "https://winagrotech.com/?s={search_term_string}",
                     "query-input": "required name=search_term_string"
                   }
                 },
@@ -201,19 +201,19 @@ export default function RootLayout({
                       "@type": "ListItem",
                       "position": 1,
                       "name": "Accueil",
-                      "item": "https://winagro.bj"
+                      "item": "https://winagrotech.com"
                     },
                     {
                       "@type": "ListItem",
                       "position": 2,
                       "name": "Formation",
-                      "item": "https://winagro.bj/formation/"
+                      "item": "https://winagrotech.com/formation/"
                     },
                     {
                       "@type": "ListItem",
                       "position": 3,
                       "name": "Élevage de Volaille",
-                      "item": "https://winagro.bj/formation/elevage-volaille/"
+                      "item": "https://winagrotech.com/formation/elevage-volaille/"
                     }
                   ]
                 }
@@ -229,7 +229,7 @@ export default function RootLayout({
 
 
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-M7812XKKW1"
+          src="https://www.googletagmanager.com/gtag/js?id=G-VV16Q0T0LY"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -237,7 +237,7 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-M7812XKKW1');
+            gtag('config', 'G-VV16Q0T0LY');
           `}
         </Script>
       </body>
