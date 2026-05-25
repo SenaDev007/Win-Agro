@@ -460,7 +460,7 @@ export default function AdminDashboard() {
     );
   }
 
-  const { stats: analyticsStats, dailyTrend, trafficSources, topPages, isMock } = data || {};
+  const { stats: analyticsStats, dailyTrend, trafficSources, topPages, genders, ageBrackets, locations, isMock } = data || {};
 
   const filteredLeads = leads.filter(lead => {
     if (leadFilter === "all") return true;
@@ -821,6 +821,85 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Demographics & Locations Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Location stats */}
+              <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
+                <h3 className="font-serif text-base font-bold mb-4">Villes & Pays d'origine</h3>
+                <div className="divide-y divide-white/5 max-h-60 overflow-y-auto pr-1">
+                  {locations && locations.length > 0 ? (
+                    locations.map((loc: any, idx: number) => {
+                      const totalLoc = locations.reduce((s: number, o: any) => s + o.users, 0);
+                      const pct = totalLoc > 0 ? (loc.users / totalLoc) * 100 : 0;
+                      return (
+                        <div key={idx} className="py-2.5 flex items-center justify-between text-xs first:pt-0 last:pb-0">
+                          <span className="font-semibold text-gray-300">{loc.city}, {loc.country}</span>
+                          <span className="font-bold text-primary-green font-mono">{loc.users.toLocaleString()} ({pct.toFixed(0)}%)</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-gray-500 py-4 text-center">Aucune donnée de localisation</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Gender stats */}
+              <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
+                <h3 className="font-serif text-base font-bold mb-4">Répartition par Genre</h3>
+                <div className="space-y-4">
+                  {genders && genders.length > 0 ? (
+                    genders.map((g: any, idx: number) => {
+                      const totalUsers = genders.reduce((s: number, o: any) => s + o.users, 0);
+                      const pct = totalUsers > 0 ? (g.users / totalUsers) * 100 : 0;
+                      const genderName = g.gender === "male" ? "Homme (Masculin)" : g.gender === "female" ? "Femme (Féminin)" : "Non spécifié / Autre";
+                      return (
+                        <div key={idx} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-gray-300">{genderName}</span>
+                            <span className="text-gray-400 font-mono">{g.users.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                          </div>
+                          <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary-green rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-gray-500 py-4 text-center">Aucune donnée de genre disponible</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Age Bracket stats */}
+              <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
+                <h3 className="font-serif text-base font-bold mb-4">Tranches d'âge</h3>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {ageBrackets && ageBrackets.length > 0 ? (
+                    ageBrackets.map((age: any, idx: number) => {
+                      const totalAge = ageBrackets.reduce((s: number, o: any) => s + o.users, 0);
+                      const pct = totalAge > 0 ? (age.users / totalAge) * 100 : 0;
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-gray-300">{age.bracket} ans</span>
+                            <span className="text-gray-400 font-mono">{pct.toFixed(0)}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary-green rounded-full opacity-80" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-gray-500 py-4 text-center">Aucune donnée de tranche d'âge</div>
+                  )}
                 </div>
               </div>
 

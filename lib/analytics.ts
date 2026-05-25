@@ -2,11 +2,18 @@ import { BetaAnalyticsDataClient } from "@google-analytics/data";
 
 const propertyId = process.env.GA_PROPERTY_ID || "431102910";
 
+// Handle quote characters in private key when set via Windows/Vercel env vars
+let privateKey = process.env.GA_PRIVATE_KEY;
+if (privateKey && privateKey.startsWith('"') && privateKey.endsWith('"')) {
+  privateKey = privateKey.slice(1, -1);
+}
+const cleanPrivateKey = privateKey?.replace(/\\n/g, "\n");
+
 // Google Analytics Data v1 client initialization
 const analyticsClient = new BetaAnalyticsDataClient({
   credentials: {
     client_email: process.env.GA_CLIENT_EMAIL,
-    private_key: process.env.GA_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    private_key: cleanPrivateKey,
   },
   projectId: process.env.GA_PROJECT_ID,
 });
@@ -18,7 +25,7 @@ export async function getAnalyticsData() {
       return getMockData();
     }
 
-    // 1. Fetch Core Metrics (Active Users, Sessions, Pageviews, Event Count)
+    // 1. Fetch Core Metrics (Active Users, Sessions, Pageviews, Bounce Rate)
     const [response] = await analyticsClient.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [
@@ -95,6 +102,46 @@ export async function getAnalyticsData() {
       limit: 10,
     });
 
+    // 5. Fetch Demographics (Gender)
+    let genderResponse;
+    try {
+      [genderResponse] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensions: [{ name: "userGender" }],
+        metrics: [{ name: "activeUsers" }],
+      });
+    } catch (e) {
+      console.warn("Could not fetch userGender, signals might be disabled.", e);
+    }
+
+    // 6. Fetch Demographics (Age Bracket)
+    let ageResponse;
+    try {
+      [ageResponse] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensions: [{ name: "userAgeBracket" }],
+        metrics: [{ name: "activeUsers" }],
+      });
+    } catch (e) {
+      console.warn("Could not fetch userAgeBracket, signals might be disabled.", e);
+    }
+
+    // 7. Fetch Locations (City / Country)
+    let locationResponse;
+    try {
+      [locationResponse] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensions: [{ name: "city" }, { name: "country" }],
+        metrics: [{ name: "activeUsers" }],
+        limit: 15,
+      });
+    } catch (e) {
+      console.warn("Could not fetch locations.", e);
+    }
+
     // Parse Core Metrics
     const row = response.rows?.[0];
     const stats = {
@@ -107,7 +154,6 @@ export async function getAnalyticsData() {
     // Parse Daily Trend
     const dailyTrend = (trendResponse.rows || []).map(r => {
       const dateStr = r.dimensionValues?.[0]?.value || "";
-      // Format YYYYMMDD to DD/MM
       const day = dateStr.slice(6, 8);
       const month = dateStr.slice(4, 6);
       return {
@@ -129,12 +175,40 @@ export async function getAnalyticsData() {
       views: parseInt(r.metricValues?.[0]?.value || "0", 10),
     }));
 
+    // Parse Genders
+    const genders = genderResponse?.rows
+      ? genderResponse.rows.map(r => ({
+          gender: r.dimensionValues?.[0]?.value || "unknown",
+          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
+        }))
+      : [];
+
+    // Parse Age Brackets
+    const ageBrackets = ageResponse?.rows
+      ? ageResponse.rows.map(r => ({
+          bracket: r.dimensionValues?.[0]?.value || "unknown",
+          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
+        }))
+      : [];
+
+    // Parse Locations
+    const locations = locationResponse?.rows
+      ? locationResponse.rows.map(r => ({
+          city: r.dimensionValues?.[0]?.value || "Unknown",
+          country: r.dimensionValues?.[1]?.value || "Unknown",
+          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
+        }))
+      : [];
+
     return {
       success: true,
       stats,
       dailyTrend,
       trafficSources,
       topPages,
+      genders,
+      ageBrackets,
+      locations,
     };
   } catch (error: any) {
     console.error("❌ Error fetching GA4 report:", error);
@@ -147,7 +221,6 @@ export async function getAnalyticsData() {
 }
 
 function getMockData() {
-  // Generate beautiful, realistic mock data for local testing
   const dailyTrend = [];
   const now = new Date();
   for (let i = 29; i >= 0; i--) {
@@ -182,6 +255,28 @@ function getMockData() {
       { path: "/produits/provendes", views: 1040 },
       { path: "/vision", views: 540 },
       { path: "/partenaires", views: 450 },
+    ],
+    genders: [
+      { gender: "female", users: 680 },
+      { gender: "male", users: 710 },
+      { gender: "unknown", users: 30 }
+    ],
+    ageBrackets: [
+      { bracket: "18-24", users: 210 },
+      { bracket: "25-34", users: 580 },
+      { bracket: "35-44", users: 390 },
+      { bracket: "45-54", users: 180 },
+      { bracket: "55-64", users: 40 },
+      { bracket: "65+", users: 20 }
+    ],
+    locations: [
+      { city: "Cotonou", country: "Bénin", users: 650 },
+      { city: "Porto-Novo", country: "Bénin", users: 320 },
+      { city: "Parakou", country: "Bénin", users: 180 },
+      { city: "Abomey-Calavi", country: "Bénin", users: 140 },
+      { city: "Paris", country: "France", users: 60 },
+      { city: "Lomé", country: "Togo", users: 40 },
+      { city: "Dakar", country: "Sénégal", users: 30 }
     ],
   };
 }
