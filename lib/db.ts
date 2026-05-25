@@ -24,6 +24,7 @@ export interface CatalogProduct {
 class LocalStore {
   private leads: LeadRecord[] = [];
   private products: CatalogProduct[] = [];
+  private adminPasswordOverride: string | null = null;
 
   constructor() {
     this.leads = [
@@ -136,6 +137,14 @@ class LocalStore {
     };
     this.products.push(newProduct);
     return newProduct;
+  }
+
+  getAdminPassword() {
+    return this.adminPasswordOverride;
+  }
+
+  setAdminPassword(password: string) {
+    this.adminPasswordOverride = password;
   }
 }
 

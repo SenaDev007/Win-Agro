@@ -26,7 +26,9 @@ export async function decrypt(input: string): Promise<any> {
 }
 
 export async function loginAdmin(password: string) {
-  const adminPassword = process.env.ADMIN_PASSWORD || "WinAgroAdmin2026!";
+  const { localStore } = require("./db");
+  const override = localStore.getAdminPassword();
+  const adminPassword = override || process.env.ADMIN_PASSWORD || "WinAgroAdmin2026!";
   if (password !== adminPassword) {
     return false;
   }

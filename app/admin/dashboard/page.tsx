@@ -15,6 +15,11 @@ export default function AdminDashboard() {
   const [leads, setLeads] = useState<any[]>([]);
   const [tab, setTab] = useState<"analytics" | "leads">("analytics");
 
+  const [newPassword, setNewPassword] = useState("");
+  const [passLoading, setPassLoading] = useState(false);
+  const [passMessage, setPassMessage] = useState("");
+  const [passError, setPassError] = useState("");
+
   // Fetch admin states (analytics and leads)
   const loadDashboardData = async () => {
     try {
@@ -70,6 +75,32 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassLoading(true);
+    setPassMessage("");
+    setPassError("");
+
+    try {
+      const res = await fetch("/api/admin/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPassMessage("Mot de passe mis à jour avec succès !");
+        setNewPassword("");
+      } else {
+        setPassError(data.error || "Erreur de validation");
+      }
+    } catch (err) {
+      setPassError("Erreur lors de la mise à jour");
+    } finally {
+      setPassLoading(false);
     }
   };
 
@@ -397,6 +428,37 @@ export default function AdminDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Password Update Section inside dashboard */}
+            <div className="mt-10 pt-8 border-t border-white/5 max-w-md">
+              <h4 className="font-serif text-sm font-bold text-white mb-2">Modifier le mot de passe d'accès</h4>
+              <p className="text-[10px] text-gray-400 mb-4">Mettez à jour le mot de passe d'administration par défaut pour renforcer la sécurité.</p>
+              
+              <form onSubmit={handleUpdatePassword} className="flex gap-2">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nouveau mot de passe"
+                  required
+                  className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                />
+                <button
+                  type="submit"
+                  disabled={passLoading}
+                  className="px-4 py-2 bg-primary-green hover:bg-primary-green/90 text-[#07130A] text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {passLoading ? "Mise à jour..." : "Enregistrer"}
+                </button>
+              </form>
+
+              {passMessage && (
+                <p className="text-primary-green text-[10px] mt-2 font-semibold">✓ {passMessage}</p>
+              )}
+              {passError && (
+                <p className="text-red-400 text-[10px] mt-2 font-semibold">⚠️ {passError}</p>
+              )}
             </div>
           </div>
         )}
