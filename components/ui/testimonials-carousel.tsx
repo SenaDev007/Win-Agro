@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export interface Testimonial {
   text: string;
@@ -91,7 +92,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
             </p>
 
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-primary-pale/40">
-              <img
+              <Image
                 src={image}
                 alt={name}
                 width={44}

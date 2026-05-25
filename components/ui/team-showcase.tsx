@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FaLinkedinIn, FaTwitter, FaBehance, FaInstagram } from 'react-icons/fa';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export interface TeamMember {
   id: string;
@@ -50,7 +51,9 @@ export default function TeamShowcase({ members = DEFAULT_MEMBERS }: TeamShowcase
           onMouseEnter={() => setHoveredId(member.id)}
           onMouseLeave={() => setHoveredId(null)}
         >
-          <img
+          <Image
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             src={member.image}
             alt={member.name}
             className="w-full h-full object-cover transition-all duration-750 rounded-2xl"
@@ -181,7 +184,7 @@ function PhotoCard({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl cursor-pointer flex-shrink-0 transition-opacity duration-300 border border-primary-green/10 shadow-sm',
+        'relative overflow-hidden rounded-xl cursor-pointer flex-shrink-0 transition-opacity duration-300 border border-primary-green/10 shadow-sm',
         className,
         isDimmed ? 'opacity-40' : 'opacity-100',
         isActive ? 'ring-2 ring-primary-green scale-105 transition-transform duration-300' : ''
@@ -189,7 +192,9 @@ function PhotoCard({
       onMouseEnter={() => onHover(member.id)}
       onMouseLeave={() => onHover(null)}
     >
-      <img
+      <Image
+        fill
+        sizes="(max-width: 768px) 150px, 130px"
         src={member.image}
         alt={member.name}
         className="w-full h-full object-cover transition-[filter] duration-500 rounded-xl"
