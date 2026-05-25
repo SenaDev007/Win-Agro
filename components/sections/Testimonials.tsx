@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { TestimonialsCarousel, Testimonial } from "@/components/ui/testimonials-carousel";
+import SubmitTestimonialModal from "@/components/ui/SubmitTestimonialModal";
 
 const STATIC_FALLBACK_TESTIMONIALS: Testimonial[] = [
   {
@@ -51,6 +52,7 @@ const STATIC_FALLBACK_TESTIMONIALS: Testimonial[] = [
 
 export default function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>(STATIC_FALLBACK_TESTIMONIALS);
+  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/testimonials")
@@ -63,9 +65,10 @@ export default function Testimonials() {
       .catch(err => console.error("Error loading testimonials", err));
   }, []);
 
-  // Split to prevent cards duplication between the two scrolling carousels
-  const firstRow = testimonials.filter((_, index) => index % 2 === 0);
-  const secondRow = testimonials.filter((_, index) => index % 2 !== 0);
+  // Split to prevent cards duplication between the two scrolling carousels only if we have enough testimonials (>= 6)
+  const isLargeSet = testimonials.length >= 6;
+  const firstRow = isLargeSet ? testimonials.filter((_, index) => index % 2 === 0) : testimonials;
+  const secondRow = isLargeSet ? testimonials.filter((_, index) => index % 2 !== 0) : [];
 
   return (
     <section id="témoignages" className="py-24 bg-[#FAFAF3] relative overflow-hidden">
@@ -97,24 +100,37 @@ export default function Testimonials() {
             transition={{ duration: 3, repeat: Infinity, times: [0, 0.15, 0.85, 1], ease: "easeInOut" }}
             className="h-1 w-16 bg-accent-yellow mx-auto mt-6 rounded-full"
           />
+
+          <div className="mt-8">
+            <button
+              onClick={() => setIsSubmitOpen(true)}
+              className="px-6 py-3 rounded-full bg-primary-green text-[#07130A] font-bold text-xs hover:bg-primary-green/90 transition-all shadow-md hover:shadow-lg cursor-pointer transform hover:-translate-y-0.5 inline-flex items-center gap-2"
+            >
+              ⭐ Donner mon avis / témoignage
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Dual Infinite Scrolling Carousels */}
+      {/* Dynamic Scrolling Carousels */}
       <div className="space-y-6 w-full relative z-10 select-none pointer-events-auto">
         <TestimonialsCarousel
           testimonials={firstRow}
-          speed={28}
+          speed={isLargeSet ? 28 : 34}
           direction="left"
           cardHeight={210}
         />
-        <TestimonialsCarousel
-          testimonials={secondRow}
-          speed={34}
-          direction="right"
-          cardHeight={210}
-        />
+        {isLargeSet && (
+          <TestimonialsCarousel
+            testimonials={secondRow}
+            speed={34}
+            direction="right"
+            cardHeight={210}
+          />
+        )}
       </div>
+
+      <SubmitTestimonialModal isOpen={isSubmitOpen} onClose={() => setIsSubmitOpen(false)} />
     </section>
   );
 }

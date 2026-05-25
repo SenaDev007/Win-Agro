@@ -1022,21 +1022,21 @@ export default function AdminDashboard() {
                           <p className="text-[10px] text-gray-400">{t.role}</p>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${t.isActive ? "bg-green-950 text-green-300" : "bg-red-950 text-red-300"}`}>
-                        {t.isActive ? "Actif" : "Masqué"}
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${t.isActive ? "bg-green-950/80 text-green-300 border border-green-800/20" : "bg-yellow-950/80 text-yellow-300 border border-yellow-800/30 animate-pulse"}`}>
+                        {t.isActive ? "Actif (Publié)" : "En attente"}
                       </span>
                     </div>
 
                     <p className="text-xs text-gray-300 italic font-sans">"{t.text}"</p>
-                    <p className="text-[10.5px] text-primary-green font-semibold">Mise en avant: <span className="text-white">{t.highlight}</span></p>
+                    <p className="text-[10.5px] text-primary-green font-semibold">Mise en avant: <span className="text-white">{t.highlight || "Aucune"}</span></p>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3">
                     <button
                       onClick={() => handleToggleTestimonialStatus(t)}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-all cursor-pointer"
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!t.isActive ? "bg-primary-green text-[#07130A] hover:bg-primary-green/90" : "bg-white/5 hover:bg-white/10 text-gray-300"}`}
                     >
-                      {t.isActive ? "Masquer" : "Activer"}
+                      {t.isActive ? "Masquer" : "Approuver & Publier"}
                     </button>
                     <button
                       onClick={() => handleOpenTestimonialForm(t)}

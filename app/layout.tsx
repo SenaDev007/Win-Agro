@@ -71,7 +71,7 @@ export default function RootLayout({
                   "description": "Formation agricole, élevage, vente de volailles, provendes et installation de fermes au Bénin. Méthodes 100% naturelles.",
                   "url": "https://winagrotech.com",
                   "telephone": "+2290161336548",
-                  "email": "contact@winagro.bj",
+                  "email": "contact@winagrotech.com",
                   "foundingDate": "2020",
                   "founder": {
                     "@type": "Person",
@@ -79,9 +79,9 @@ export default function RootLayout({
                   },
                   "address": {
                     "@type": "PostalAddress",
-                    "addressLocality": "Parakou",
+                    "addressLocality": "Porto-Novo",
                     "addressCountry": "BJ",
-                    "addressRegion": "Borgou"
+                    "addressRegion": "Ouémé"
                   },
                   "geo": {
                     "@type": "GeoCoordinates",
