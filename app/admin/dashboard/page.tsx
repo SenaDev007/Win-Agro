@@ -18,13 +18,22 @@ export default function AdminDashboard() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   
-  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services">("analytics");
+  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services" | "stats">("analytics");
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passLoading, setPassLoading] = useState(false);
   const [passMessage, setPassMessage] = useState("");
   const [passError, setPassError] = useState("");
+
+  // Lead Filter State
+  const [leadFilter, setLeadFilter] = useState<"all" | "accompagnement" | "formation" | "consultation">("all");
+
+  // Stats State
+  const [stats, setStats] = useState<any[]>([]);
+  const [editingStat, setEditingStat] = useState<any | null>(null);
+  const [statSaving, setStatSaving] = useState(false);
+  const [statError, setStatError] = useState("");
 
   // Testimonial Form State
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
@@ -37,6 +46,7 @@ export default function AdminDashboard() {
     role: "",
     isActive: true
   });
+  const [testimonialImageFile, setTestimonialImageFile] = useState<File | null>(null);
   const [tSaving, setTSaving] = useState(false);
   const [tError, setTError] = useState("");
 
@@ -61,18 +71,20 @@ export default function AdminDashboard() {
   // Fetch admin states
   const loadDashboardData = async () => {
     try {
-      const [analyticsRes, leadsRes, testimonialsRes, servicesRes] = await Promise.all([
+      const [analyticsRes, leadsRes, testimonialsRes, servicesRes, statsRes] = await Promise.all([
         fetch("/api/analytics?token=internal"),
         fetch("/api/admin/leads"),
         fetch("/api/admin/testimonials"),
-        fetch("/api/admin/services")
+        fetch("/api/admin/services"),
+        fetch("/api/admin/stats")
       ]);
 
       if (
         analyticsRes.status === 401 || 
         leadsRes.status === 401 || 
         testimonialsRes.status === 401 ||
-        servicesRes.status === 401
+        servicesRes.status === 401 ||
+        statsRes.status === 401
       ) {
         router.push(isSubdomain ? "/login" : "/admin/login");
         return;
@@ -82,11 +94,13 @@ export default function AdminDashboard() {
       const leadsData = await leadsRes.json();
       const testimonialsData = await testimonialsRes.json();
       const servicesData = await servicesRes.json();
+      const statsData = await statsRes.json();
 
       if (analyticsData.success) setData(analyticsData);
       if (leadsData.success) setLeads(leadsData.leads);
       if (testimonialsData.success) setTestimonials(testimonialsData.testimonials);
       if (servicesData.success) setServices(servicesData.services);
+      if (statsData.success) setStats(statsData.stats);
     } catch (err) {
       console.error(err);
     } finally {
@@ -153,6 +167,38 @@ export default function AdminDashboard() {
     }
   };
 
+  // Stats CRUD Handlers
+  const handleOpenStatForm = (s: any) => {
+    setEditingStat({ ...s });
+    setStatError("");
+  };
+
+  const handleSaveStat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStat) return;
+    setStatSaving(true);
+    setStatError("");
+
+    try {
+      const res = await fetch("/api/admin/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingStat)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingStat(null);
+        loadDashboardData();
+      } else {
+        setStatError(data.error || "Erreur de validation");
+      }
+    } catch (err) {
+      setStatError("Erreur lors de l'enregistrement");
+    } finally {
+      setStatSaving(false);
+    }
+  };
+
   // Testimonial CRUD Handlers
   const handleOpenTestimonialForm = (t?: any) => {
     if (t) {
@@ -176,6 +222,7 @@ export default function AdminDashboard() {
         isActive: true
       });
     }
+    setTestimonialImageFile(null);
     setTError("");
     setShowTestimonialForm(true);
   };
@@ -185,14 +232,38 @@ export default function AdminDashboard() {
     setTSaving(true);
     setTError("");
 
+    // Client-side size guard (5 MB)
+    if (testimonialImageFile && testimonialImageFile.size > 5 * 1024 * 1024) {
+      setTError("Image trop volumineuse (max 5 MB)");
+      setTSaving(false);
+      return;
+    }
+
     try {
+      const formData = new FormData();
+      formData.append("id",        testimonialForm.id);
+      formData.append("text",      testimonialForm.text);
+      formData.append("highlight", testimonialForm.highlight);
+      formData.append("name",      testimonialForm.name);
+      formData.append("role",      testimonialForm.role);
+      formData.append("isActive",  String(testimonialForm.isActive));
+
+      if (testimonialImageFile) {
+        // New file chosen → upload to Vercel Blob via API
+        formData.append("image", testimonialImageFile);
+      } else if (testimonialForm.image) {
+        // No new file → preserve existing URL (edit mode)
+        formData.append("image", testimonialForm.image);
+      }
+
       const res = await fetch("/api/admin/testimonials", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(testimonialForm)
+        // No explicit Content-Type → browser sets multipart boundary
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
+        setTestimonialImageFile(null);
         setShowTestimonialForm(false);
         loadDashboardData();
       } else {
@@ -349,7 +420,7 @@ export default function AdminDashboard() {
     );
   }
 
-  const { stats, dailyTrend, trafficSources, topPages, isMock } = data || {};
+  const { stats: analyticsStats, dailyTrend, trafficSources, topPages, isMock } = data || {};
 
   return (
     <div className="min-h-screen bg-[#07130A] text-white font-sans flex flex-col">
@@ -376,6 +447,16 @@ export default function AdminDashboard() {
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-primary-green" : ""}`} />
           </button>
+
+          <a
+            href={typeof window !== "undefined" ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : "/") : "/"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold text-gray-300 hover:text-white transition-all cursor-pointer border border-white/5"
+          >
+            <Eye className="w-4 h-4 text-primary-green" />
+            <span className="hidden sm:inline">Voir le site</span>
+          </a>
           
           <button
             onClick={() => router.push("/admin/catalogue")}
@@ -445,6 +526,16 @@ export default function AdminDashboard() {
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
             )}
           </button>
+          <button
+            onClick={() => setTab("stats")}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "stats" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+          >
+            <Percent className="w-4 h-4 text-primary-green" />
+            Chiffres Clés
+            {tab === "stats" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
+            )}
+          </button>
         </div>
 
         {tab === "analytics" && (
@@ -456,7 +547,7 @@ export default function AdminDashboard() {
                   <span className="text-xs font-bold uppercase tracking-wider">Visiteurs Actifs</span>
                   <Users className="w-5 h-5 text-primary-green" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(stats?.activeUsers || 0).toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(analyticsStats?.activeUsers || 0).toLocaleString()}</p>
                 <p className="text-[10px] text-gray-400 mt-1 font-sans">Sur les 30 derniers jours</p>
               </div>
 
@@ -465,7 +556,7 @@ export default function AdminDashboard() {
                   <span className="text-xs font-bold uppercase tracking-wider">Sessions</span>
                   <BarChart3 className="w-5 h-5 text-primary-green" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(stats?.sessions || 0).toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(analyticsStats?.sessions || 0).toLocaleString()}</p>
                 <p className="text-[10px] text-gray-400 mt-1 font-sans">Visites totale enregistrées</p>
               </div>
 
@@ -474,7 +565,7 @@ export default function AdminDashboard() {
                   <span className="text-xs font-bold uppercase tracking-wider">Pages Vues</span>
                   <Clock className="w-5 h-5 text-primary-green" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(stats?.pageViews || 0).toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(analyticsStats?.pageViews || 0).toLocaleString()}</p>
                 <p className="text-[10px] text-gray-400 mt-1 font-sans">Lecture de contenu cumulée</p>
               </div>
 
@@ -483,7 +574,7 @@ export default function AdminDashboard() {
                   <span className="text-xs font-bold uppercase tracking-wider">Taux de rebond</span>
                   <Percent className="w-5 h-5 text-primary-green" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(stats?.bounceRate || 0).toFixed(1)}%</p>
+                <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(analyticsStats?.bounceRate || 0).toFixed(1)}%</p>
                 <p className="text-[10px] text-gray-400 mt-1 font-sans">Visites à page unique</p>
               </div>
             </div>
@@ -851,14 +942,53 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 font-semibold">Avatar Image URL (optionnel)</label>
-                      <input
-                        type="text"
-                        value={testimonialForm.image}
-                        onChange={(e) => setTestimonialForm(prev => ({ ...prev, image: e.target.value }))}
-                        placeholder="/avatar_chabi.png"
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
-                      />
+                      <label className="text-gray-400 font-semibold">Photo avatar (optionnel – max 5 MB)</label>
+
+                      {/* Preview: existing image or newly-selected file */}
+                      {(testimonialForm.image || testimonialImageFile) && (
+                        <div className="flex items-center gap-3 p-2 bg-black/30 border border-white/5 rounded-xl">
+                          <img
+                            src={
+                              testimonialImageFile
+                                ? URL.createObjectURL(testimonialImageFile)
+                                : testimonialForm.image
+                            }
+                            alt="Aperçu"
+                            className="w-10 h-10 rounded-full object-cover border border-white/10"
+                          />
+                          <span className="text-[11px] text-gray-400 truncate flex-1">
+                            {testimonialImageFile ? testimonialImageFile.name : testimonialForm.image}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTestimonialImageFile(null);
+                              setTestimonialForm(prev => ({ ...prev, image: "" }));
+                            }}
+                            className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      <label className="flex items-center gap-2 w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-gray-300 hover:border-primary-green/50 transition-colors cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-primary-green shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span className="text-xs">
+                          {testimonialImageFile ? testimonialImageFile.name : "Choisir une photo…"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+                            setTestimonialImageFile(file);
+                          }}
+                        />
+                      </label>
                     </div>
 
                     <div className="space-y-1">

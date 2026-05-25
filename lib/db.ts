@@ -42,16 +42,56 @@ export interface ServiceRecord {
   isActive: boolean;
 }
 
+export interface StatRecord {
+  id: string;
+  value: number;
+  suffix: string;
+  label: string;
+  subText: string;
+}
+
 // In-Memory store (persisted for the lifecycle of Next.js dev server, fallback structure)
 class LocalStore {
   private leads: LeadRecord[] = [];
   private products: CatalogProduct[] = [];
   private testimonials: TestimonialRecord[] = [];
   private services: ServiceRecord[] = [];
+  private stats: StatRecord[] = [];
   private adminPasswordOverride: string | null = null;
   private adminEmailOverride: string | null = null;
 
   constructor() {
+    this.stats = [
+      {
+        id: "s1",
+        value: 500,
+        suffix: "+",
+        label: "Porteurs de projets",
+        subText: "Formés et accompagnés vers la réussite sur le terrain.",
+      },
+      {
+        id: "s2",
+        value: 6,
+        suffix: "",
+        label: "Filières d'élevage",
+        subText: "Maîtrisées de bout en bout avec des méthodes éprouvées.",
+      },
+      {
+        id: "s3",
+        value: 24,
+        suffix: "h",
+        label: "Délai de réponse",
+        subText: "Garanti pour ne jamais vous laisser seul face aux doutes.",
+      },
+      {
+        id: "s4",
+        value: 100,
+        suffix: "%",
+        label: "Méthodes naturelles",
+        subText: "Sans aucun intrant chimique pour préserver vos bandes.",
+      },
+    ];
+
     this.leads = [
       {
         id: "l1",
@@ -332,6 +372,20 @@ class LocalStore {
     const index = this.services.findIndex(item => item.key === key);
     if (index !== -1) {
       this.services.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // --- Stats CRUD ---
+  getStats() {
+    return this.stats;
+  }
+
+  updateStat(s: StatRecord) {
+    const index = this.stats.findIndex(item => item.id === s.id);
+    if (index !== -1) {
+      this.stats[index] = { ...this.stats[index], ...s };
       return true;
     }
     return false;

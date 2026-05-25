@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { localStore } from "@/lib/db";
+import { put } from "@vercel/blob";
+import { v4 as uuidv4 } from "uuid";
 
 function sanitize(str: any): string {
   if (typeof str !== "string") return "";
@@ -28,14 +30,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { id, text, highlight, image, name, role, isActive } = body;
+    // Support both JSON and multipart/form-data uploads
+    let id = "";
+    let cleanText = "";
+    let cleanHighlight = "";
+    let cleanImage = "/Logo Win Agro.png";
+    let cleanName = "";
+    let cleanRole = "";
+    let cleanIsActive = true;
 
-    const cleanText = sanitize(text);
-    const cleanHighlight = sanitize(highlight);
-    const cleanImage = sanitize(image) || "/Logo Win Agro.png";
-    const cleanName = sanitize(name);
-    const cleanRole = sanitize(role);
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      id = (formData.get("id") as string) ?? "";
+      const textRaw = (formData.get("text") as string) ?? "";
+      const highlightRaw = (formData.get("highlight") as string) ?? "";
+      const nameRaw = (formData.get("name") as string) ?? "";
+      const roleRaw = (formData.get("role") as string) ?? "";
+      const isActiveRaw = formData.get("isActive");
+      cleanIsActive = isActiveRaw === "true";
+
+      const imageFile = formData.get("image") as File | null;
+      if (imageFile && imageFile.size > 0) {
+        if (imageFile.size > 5 * 1024 * 1024) {
+          return NextResponse.json({ success: false, error: "Image trop volumineuse (max 5 MB)" }, { status: 400 });
+        }
+        const ext = imageFile.name.split(".").pop() || "png";
+        const blobName = `testimonials/${uuidv4()}.${ext}`;
+        const { url } = await put(blobName, imageFile, { access: "public" });
+        cleanImage = url;
+      } else {
+        const imageUrl = (formData.get("image") as string) ?? "/Logo Win Agro.png";
+        cleanImage = sanitize(imageUrl);
+      }
+
+      cleanText = sanitize(textRaw);
+      cleanHighlight = sanitize(highlightRaw);
+      cleanName = sanitize(nameRaw);
+      cleanRole = sanitize(roleRaw);
+    } else {
+      // Fallback to JSON body
+      const body = await request.json();
+      const { id: bid, text, highlight, image, name, role, isActive } = body;
+      id = bid ?? "";
+      cleanText = sanitize(text);
+      cleanHighlight = sanitize(highlight);
+      cleanImage = sanitize(image) || "/Logo Win Agro.png";
+      cleanName = sanitize(name);
+      cleanRole = sanitize(role);
+      cleanIsActive = !!isActive;
+    }
+
+
 
     if (!cleanText || !cleanName || !cleanRole) {
       return NextResponse.json({ success: false, error: "Champs requis manquants" }, { status: 400 });
@@ -50,7 +96,7 @@ export async function POST(request: Request) {
         image: cleanImage,
         name: cleanName,
         role: cleanRole,
-        isActive: !!isActive
+        isActive: cleanIsActive
       });
       if (success) {
         return NextResponse.json({ success: true });
@@ -65,7 +111,7 @@ export async function POST(request: Request) {
         image: cleanImage,
         name: cleanName,
         role: cleanRole,
-        isActive: isActive !== undefined ? !!isActive : true
+        isActive: cleanIsActive
       });
       return NextResponse.json({ success: true, testimonial: newT });
     }

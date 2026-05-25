@@ -87,7 +87,7 @@ const StatItem: React.FC<StatItemProps> = ({ value, suffix, label, subText }) =>
 };
 
 export default function Stats() {
-  const statsData: StatItemProps[] = [
+  const [statsData, setStatsData] = useState<StatItemProps[]>([
     {
       value: 500,
       suffix: "+",
@@ -112,7 +112,18 @@ export default function Stats() {
       label: "Méthodes naturelles",
       subText: "Sans aucun intrant chimique pour préserver vos bandes.",
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.stats)) {
+          setStatsData(data.stats);
+        }
+      })
+      .catch((err) => console.error("Error loading stats:", err));
+  }, []);
 
   return (
     <section className="py-20 bg-[#FAFAF3] relative overflow-hidden">
