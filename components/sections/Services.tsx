@@ -28,7 +28,7 @@ export default function Services({ onSelectService }: ServicesProps) {
     setIsModalOpen(true);
   };
 
-  const servicesList = [
+  const STATIC_FALLBACK_SERVICES = [
     {
       key: "formation_elevage",
       title: "Formation Pratique",
@@ -58,7 +58,7 @@ export default function Services({ onSelectService }: ServicesProps) {
       ],
       availability: "Accompagnement clé en main de A à Z par Victoire et ses équipes",
       cta: "Lancer mon projet →",
-      isPremium: true, // stands out visually
+      isPremium: true,
     },
     {
       key: "consultation",
@@ -75,6 +75,19 @@ export default function Services({ onSelectService }: ServicesProps) {
       isPremium: false,
     },
   ];
+
+  const [servicesList, setServicesList] = useState<any[]>(STATIC_FALLBACK_SERVICES);
+
+  React.useEffect(() => {
+    fetch("/api/services")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.services) && data.services.length > 0) {
+          setServicesList(data.services);
+        }
+      })
+      .catch(err => console.error("Error loading services", err));
+  }, []);
 
   return (
     <section id="services" className="py-24 bg-[#FAFAF3] relative overflow-hidden">
@@ -159,7 +172,7 @@ export default function Services({ onSelectService }: ServicesProps) {
                     </h4>
                     
                     <ul className="space-y-3 mb-8">
-                      {service.bullets.map((bullet, idx) => (
+                      {service.bullets.map((bullet: string, idx: number) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-200 font-sans">
                           <span className="text-accent-yellow mt-0.5">✓</span>
                           <span>{bullet}</span>
@@ -226,7 +239,7 @@ export default function Services({ onSelectService }: ServicesProps) {
                   </h4>
                   
                   <ul className="space-y-3 mb-8">
-                    {service.bullets.map((bullet, idx) => (
+                    {service.bullets.map((bullet: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-2 text-sm text-gray-text font-sans">
                         <span className="text-primary-green mt-0.5">✓</span>
                         <span>{bullet}</span>

@@ -1,54 +1,67 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { TestimonialsCarousel, Testimonial } from "@/components/ui/testimonials-carousel";
 
+const STATIC_FALLBACK_TESTIMONIALS: Testimonial[] = [
+  {
+    text: "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.",
+    highlight: "Mon taux de mortalité est passé de 30% à 8%",
+    image: "/avatar_chabi.png",
+    name: "Chabi A.",
+    role: "Aviculteur · Parakou, Bénin",
+  },
+  {
+    text: "Je suis passée de l'idée à une ferme rentable de 1000 pondeuses en 3 mois. J'avais la volonté d'installer ma ferme, mais j'étais terrifiée par le risque. Win Agro a pris en charge l'étude de faisabilité et l'installation.",
+    highlight: "ferme rentable de 1000 pondeuses en 3 mois",
+    image: "/avatar_pascaline.png",
+    name: "Pascaline M.",
+    role: "Entrepreneuse · Ouidah, Bénin",
+  },
+  {
+    text: "Une productivité globale améliorée de 25% sur mon cheptel. Mes lapines avaient des portées faibles. Victoire a revu notre plan de prophylaxie naturelle et introduit des fourrages locaux riches.",
+    highlight: "productivité globale améliorée de 25%",
+    image: "/avatar_romaric.png",
+    name: "Romaric S.",
+    role: "Éleveur de Lapins · Bohicon, Bénin",
+  },
+  {
+    text: "Mon rendement de culture a doublé grâce aux semences sélectionnées et au système d'irrigation économique proposé par Win Agro. Les résultats sont visibles dès le premier mois.",
+    highlight: "Mon rendement de culture a doublé",
+    image: "/avatar_sanni.png",
+    name: "Sanni B.",
+    role: "Maraîcher · Malanville, Bénin",
+  },
+  {
+    text: "Grâce à la formation en ligne de Win Agro, j'ai lancé mon élevage de pintades à domicile. Le démarrage a été simple, et le taux de survie est excellent avec leur accompagnement.",
+    highlight: "lancement simple et taux de survie excellent",
+    image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=120&h=120",
+    name: "Amina T.",
+    role: "Avicultrice · Djougou, Bénin",
+  },
+  {
+    text: "J'économise 30% sur les coûts alimentaires de mes bêtes en fabriquant ma propre provende grâce aux formulations naturelles apprises dans les ateliers pratiques de Win Agro.",
+    highlight: "J'économise 30% sur les coûts alimentaires",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=120&h=120",
+    name: "Gildas K.",
+    role: "Producteur de provendes · Calavi, Bénin",
+  }
+];
+
 export default function Testimonials() {
-  const testimonials: Testimonial[] = [
-    {
-      text: "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.",
-      highlight: "Mon taux de mortalité est passé de 30% à 8%",
-      image: "/avatar_chabi.png",
-      name: "Chabi A.",
-      role: "Aviculteur · Parakou, Bénin",
-    },
-    {
-      text: "Je suis passée de l'idée à une ferme rentable de 1000 pondeuses en 3 mois. J'avais la volonté d'installer ma ferme, mais j'étais terrifiée par le risque. Win Agro a pris en charge l'étude de faisabilité et l'installation.",
-      highlight: "ferme rentable de 1000 pondeuses en 3 mois",
-      image: "/avatar_pascaline.png",
-      name: "Pascaline M.",
-      role: "Entrepreneuse · Ouidah, Bénin",
-    },
-    {
-      text: "Une productivité globale améliorée de 25% sur mon cheptel. Mes lapines avaient des portées faibles. Victoire a revu notre plan de prophylaxie naturelle et introduit des fourrages locaux riches.",
-      highlight: "productivité globale améliorée de 25%",
-      image: "/avatar_romaric.png",
-      name: "Romaric S.",
-      role: "Éleveur de Lapins · Bohicon, Bénin",
-    },
-    {
-      text: "Mon rendement de culture a doublé grâce aux semences sélectionnées et au système d'irrigation économique proposé par Win Agro. Les résultats sont visibles dès le premier mois.",
-      highlight: "Mon rendement de culture a doublé",
-      image: "/avatar_sanni.png",
-      name: "Sanni B.",
-      role: "Maraîcher · Malanville, Bénin",
-    },
-    {
-      text: "Grâce à la formation en ligne de Win Agro, j'ai lancé mon élevage de pintades à domicile. Le démarrage a été simple, et le taux de survie est excellent avec leur accompagnement.",
-      highlight: "lancement simple et taux de survie excellent",
-      image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Amina T.",
-      role: "Avicultrice · Djougou, Bénin",
-    },
-    {
-      text: "J'économise 30% sur les coûts alimentaires de mes bêtes en fabriquant ma propre provende grâce aux formulations naturelles apprises dans les ateliers pratiques de Win Agro.",
-      highlight: "J'économise 30% sur les coûts alimentaires",
-      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=120&h=120",
-      name: "Gildas K.",
-      role: "Producteur de provendes · Calavi, Bénin",
-    }
-  ];
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(STATIC_FALLBACK_TESTIMONIALS);
+
+  useEffect(() => {
+    fetch("/api/testimonials")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
+          setTestimonials(data.testimonials);
+        }
+      })
+      .catch(err => console.error("Error loading testimonials", err));
+  }, []);
 
   // Split to prevent cards duplication between the two scrolling carousels
   const firstRow = testimonials.filter((_, index) => index % 2 === 0);

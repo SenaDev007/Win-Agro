@@ -4,40 +4,88 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   BarChart3, Users, Clock, Percent, AlertCircle, Phone, MapPin, 
-  Tag, Loader2, LogOut, CheckCircle2, ChevronRight, Eye, RefreshCw
+  Tag, Loader2, LogOut, CheckCircle2, ChevronRight, Eye, RefreshCw,
+  MessageSquare, Briefcase, Plus, Trash2, Edit2, Check, X, ShieldAlert, Sparkles
 } from "lucide-react";
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
-  const [tab, setTab] = useState<"analytics" | "leads">("analytics");
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  
+  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services">("analytics");
 
   const [newPassword, setNewPassword] = useState("");
   const [passLoading, setPassLoading] = useState(false);
   const [passMessage, setPassMessage] = useState("");
   const [passError, setPassError] = useState("");
 
-  // Fetch admin states (analytics and leads)
+  // Testimonial Form State
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false);
+  const [testimonialForm, setTestimonialForm] = useState({
+    id: "",
+    text: "",
+    highlight: "",
+    image: "",
+    name: "",
+    role: "",
+    isActive: true
+  });
+  const [tSaving, setTSaving] = useState(false);
+  const [tError, setTError] = useState("");
+
+  // Service Form State
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [serviceForm, setServiceForm] = useState({
+    key: "",
+    title: "",
+    hook: "",
+    problem: "",
+    bullets: [] as string[],
+    bulletInput: "",
+    availability: "",
+    cta: "",
+    isPremium: false,
+    isActive: true,
+    isNew: true
+  });
+  const [sSaving, setSSaving] = useState(false);
+  const [sError, setSError] = useState("");
+
+  // Fetch admin states
   const loadDashboardData = async () => {
     try {
-      const [analyticsRes, leadsRes] = await Promise.all([
+      const [analyticsRes, leadsRes, testimonialsRes, servicesRes] = await Promise.all([
         fetch("/api/analytics?token=internal"),
-        fetch("/api/admin/leads")
+        fetch("/api/admin/leads"),
+        fetch("/api/admin/testimonials"),
+        fetch("/api/admin/services")
       ]);
 
-      if (analyticsRes.status === 401 || leadsRes.status === 401) {
-        router.push("/admin/login");
+      if (
+        analyticsRes.status === 401 || 
+        leadsRes.status === 401 || 
+        testimonialsRes.status === 401 ||
+        servicesRes.status === 401
+      ) {
+        router.push(isSubdomain ? "/login" : "/admin/login");
         return;
       }
 
       const analyticsData = await analyticsRes.json();
       const leadsData = await leadsRes.json();
+      const testimonialsData = await testimonialsRes.json();
+      const servicesData = await servicesRes.json();
 
       if (analyticsData.success) setData(analyticsData);
       if (leadsData.success) setLeads(leadsData.leads);
+      if (testimonialsData.success) setTestimonials(testimonialsData.testimonials);
+      if (servicesData.success) setServices(servicesData.services);
     } catch (err) {
       console.error(err);
     } finally {
@@ -57,7 +105,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await fetch("/api/admin/login", { method: "DELETE" });
-    router.push("/admin/login");
+    router.push(isSubdomain ? "/login" : "/admin/login");
     router.refresh();
   };
 
@@ -70,7 +118,6 @@ export default function AdminDashboard() {
         body: JSON.stringify({ id, status: nextStatus })
       });
       if (res.ok) {
-        // Refresh local leads list
         setLeads(prev => prev.map(l => l.id === id ? { ...l, status: nextStatus } : l));
       }
     } catch (err) {
@@ -101,6 +148,191 @@ export default function AdminDashboard() {
       setPassError("Erreur lors de la mise à jour");
     } finally {
       setPassLoading(false);
+    }
+  };
+
+  // Testimonial CRUD Handlers
+  const handleOpenTestimonialForm = (t?: any) => {
+    if (t) {
+      setTestimonialForm({
+        id: t.id,
+        text: t.text,
+        highlight: t.highlight,
+        image: t.image,
+        name: t.name,
+        role: t.role,
+        isActive: t.isActive
+      });
+    } else {
+      setTestimonialForm({
+        id: "",
+        text: "",
+        highlight: "",
+        image: "",
+        name: "",
+        role: "",
+        isActive: true
+      });
+    }
+    setTError("");
+    setShowTestimonialForm(true);
+  };
+
+  const handleSaveTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTSaving(true);
+    setTError("");
+
+    try {
+      const res = await fetch("/api/admin/testimonials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(testimonialForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowTestimonialForm(false);
+        loadDashboardData();
+      } else {
+        setTError(data.error || "Erreur de validation");
+      }
+    } catch (err) {
+      setTError("Erreur lors de l'enregistrement");
+    } finally {
+      setTSaving(false);
+    }
+  };
+
+  const handleDeleteTestimonial = async (id: string) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce témoignage ?")) return;
+    try {
+      const res = await fetch(`/api/admin/testimonials?id=${id}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleTestimonialStatus = async (t: any) => {
+    try {
+      await fetch("/api/admin/testimonials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...t, isActive: !t.isActive })
+      });
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Service CRUD Handlers
+  const handleOpenServiceForm = (s?: any) => {
+    if (s) {
+      setServiceForm({
+        key: s.key,
+        title: s.title,
+        hook: s.hook,
+        problem: s.problem,
+        bullets: [...s.bullets],
+        bulletInput: "",
+        availability: s.availability,
+        cta: s.cta,
+        isPremium: s.isPremium,
+        isActive: s.isActive,
+        isNew: false
+      });
+    } else {
+      setServiceForm({
+        key: "",
+        title: "",
+        hook: "",
+        problem: "",
+        bullets: [],
+        bulletInput: "",
+        availability: "",
+        cta: "",
+        isPremium: false,
+        isActive: true,
+        isNew: true
+      });
+    }
+    setSError("");
+    setShowServiceForm(true);
+  };
+
+  const handleAddBullet = () => {
+    if (serviceForm.bulletInput.trim()) {
+      setServiceForm(prev => ({
+        ...prev,
+        bullets: [...prev.bullets, prev.bulletInput.trim()],
+        bulletInput: ""
+      }));
+    }
+  };
+
+  const handleRemoveBullet = (index: number) => {
+    setServiceForm(prev => ({
+      ...prev,
+      bullets: prev.bullets.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSSaving(true);
+    setSError("");
+
+    try {
+      const res = await fetch("/api/admin/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(serviceForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowServiceForm(false);
+        loadDashboardData();
+      } else {
+        setSError(data.error || "Erreur de validation");
+      }
+    } catch (err) {
+      setSError("Erreur lors de l'enregistrement");
+    } finally {
+      setSSaving(false);
+    }
+  };
+
+  const handleDeleteService = async (key: string) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce service ?")) return;
+    try {
+      const res = await fetch(`/api/admin/services?key=${key}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleServiceStatus = async (s: any) => {
+    try {
+      await fetch("/api/admin/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...s, isActive: !s.isActive })
+      });
+      loadDashboardData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -145,10 +377,10 @@ export default function AdminDashboard() {
           
           <button
             onClick={() => router.push("/admin/catalogue")}
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold text-gray-300 hover:text-white transition-all cursor-pointer border border-white/5"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold text-gray-300 hover:text-white transition-all cursor-pointer border border-white/5"
           >
             <Tag className="w-4 h-4" />
-            Gérer catalogue
+            <span className="hidden sm:inline">Gérer catalogue</span>
           </button>
 
           <button
@@ -165,11 +397,12 @@ export default function AdminDashboard() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         
         {/* Navigation Tabs */}
-        <div className="flex border-b border-primary-green/10">
+        <div className="flex border-b border-primary-green/10 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
             onClick={() => setTab("analytics")}
-            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer ${tab === "analytics" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "analytics" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
           >
+            <BarChart3 className="w-4 h-4 text-primary-green" />
             Statistiques Google Analytics
             {tab === "analytics" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
@@ -179,6 +412,7 @@ export default function AdminDashboard() {
             onClick={() => setTab("leads")}
             className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "leads" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
           >
+            <Users className="w-4 h-4 text-primary-green" />
             Prospects & Leads
             {leads.filter(l => l.status === "new").length > 0 && (
               <span className="w-4 h-4 rounded-full bg-primary-green text-[9px] font-black text-[#07130A] flex items-center justify-center">
@@ -186,6 +420,26 @@ export default function AdminDashboard() {
               </span>
             )}
             {tab === "leads" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("testimonials")}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "testimonials" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+          >
+            <MessageSquare className="w-4 h-4 text-primary-green" />
+            Témoignages & Avis
+            {tab === "testimonials" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("services")}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "services" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+          >
+            <Briefcase className="w-4 h-4 text-primary-green" />
+            Services
+            {tab === "services" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
             )}
           </button>
@@ -210,7 +464,7 @@ export default function AdminDashboard() {
                   <BarChart3 className="w-5 h-5 text-primary-green" />
                 </div>
                 <p className="text-2xl sm:text-3xl font-serif font-black text-white">{(stats?.sessions || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-gray-400 mt-1 font-sans">Visites totales enregistrées</p>
+                <p className="text-[10px] text-gray-400 mt-1 font-sans">Visites totale enregistrées</p>
               </div>
 
               <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-2xl p-5 shadow-lg">
@@ -460,6 +714,479 @@ export default function AdminDashboard() {
                 <p className="text-red-400 text-[10px] mt-2 font-semibold">⚠️ {passError}</p>
               )}
             </div>
+          </div>
+        )}
+
+        {tab === "testimonials" && (
+          <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold">Gestion des Témoignages & Avis</h3>
+                <p className="text-xs text-gray-400">Gérez les témoignages de clients s'affichant sur la page d'accueil</p>
+              </div>
+              <button
+                onClick={() => handleOpenTestimonialForm()}
+                className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all self-start"
+              >
+                <Plus className="w-4 h-4" /> Ajouter un témoignage
+              </button>
+            </div>
+
+            {/* Testimonials List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {testimonials.map(t => (
+                <div key={t.id} className="p-5 rounded-2xl bg-black/30 border border-white/5 flex flex-col justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <img 
+                          src={t.image || "/Logo Win Agro.png"} 
+                          alt={t.name} 
+                          className="w-10 h-10 rounded-full object-cover border border-primary-green/20"
+                          onError={(e) => { (e.target as any).src = "/Logo Win Agro.png"; }}
+                        />
+                        <div>
+                          <h4 className="font-bold text-sm text-white">{t.name}</h4>
+                          <p className="text-[10px] text-gray-400">{t.role}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${t.isActive ? "bg-green-950 text-green-300" : "bg-red-950 text-red-300"}`}>
+                        {t.isActive ? "Actif" : "Masqué"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-300 italic font-sans">"{t.text}"</p>
+                    <p className="text-[10.5px] text-primary-green font-semibold">Mise en avant: <span className="text-white">{t.highlight}</span></p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3">
+                    <button
+                      onClick={() => handleToggleTestimonialStatus(t)}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-all cursor-pointer"
+                    >
+                      {t.isActive ? "Masquer" : "Activer"}
+                    </button>
+                    <button
+                      onClick={() => handleOpenTestimonialForm(t)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white cursor-pointer"
+                      title="Modifier"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTestimonial(t.id)}
+                      className="p-1.5 rounded-lg bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-950/40 cursor-pointer"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {testimonials.length === 0 && (
+                <div className="col-span-2 py-8 text-center text-gray-500 text-sm bg-black/10 border border-dashed border-white/5 rounded-2xl">
+                  Aucun témoignage enregistré pour le moment.
+                </div>
+              )}
+            </div>
+
+            {/* Testimonial Form Modal/Overlay */}
+            {showTestimonialForm && (
+              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-lg bg-[#0F2214] border border-primary-green/20 rounded-3xl p-6 shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="font-serif text-base font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-primary-green" />
+                      {testimonialForm.id ? "Modifier le Témoignage" : "Ajouter un Témoignage"}
+                    </h3>
+                    <button 
+                      onClick={() => setShowTestimonialForm(false)}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {tError && (
+                    <div className="p-3 bg-red-950/40 border border-red-900/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {tError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveTestimonial} className="space-y-4 text-xs">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Nom du client</label>
+                        <input
+                          type="text"
+                          required
+                          value={testimonialForm.name}
+                          onChange={(e) => setTestimonialForm(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Ex: Chabi A."
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Rôle / Localisation</label>
+                        <input
+                          type="text"
+                          required
+                          value={testimonialForm.role}
+                          onChange={(e) => setTestimonialForm(prev => ({ ...prev, role: e.target.value }))}
+                          placeholder="Ex: Aviculteur · Parakou, Bénin"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Avatar Image URL (optionnel)</label>
+                      <input
+                        type="text"
+                        value={testimonialForm.image}
+                        onChange={(e) => setTestimonialForm(prev => ({ ...prev, image: e.target.value }))}
+                        placeholder="/avatar_chabi.png"
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Phrase clé à mettre en gras (Highlight)</label>
+                      <input
+                        type="text"
+                        required
+                        value={testimonialForm.highlight}
+                        onChange={(e) => setTestimonialForm(prev => ({ ...prev, highlight: e.target.value }))}
+                        placeholder="Ex: Taux de mortalité passé de 30% à 8%"
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Témoignage complet</label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={testimonialForm.text}
+                        onChange={(e) => setTestimonialForm(prev => ({ ...prev, text: e.target.value }))}
+                        placeholder="Mon taux de mortalité est passé..."
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="tIsActive"
+                        checked={testimonialForm.isActive}
+                        onChange={(e) => setTestimonialForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                        className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                      />
+                      <label htmlFor="tIsActive" className="text-gray-300 font-bold cursor-pointer">Rendre le témoignage visible sur le site</label>
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-3 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setShowTestimonialForm(false)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold transition-all cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={tSaving}
+                        className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold transition-all cursor-pointer disabled:opacity-60 flex items-center gap-1"
+                      >
+                        {tSaving ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "services" && (
+          <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold">Gestion des Services</h3>
+                <p className="text-xs text-gray-400">Configurez les services et programmes d'accompagnement de Win Agro</p>
+              </div>
+              <button
+                onClick={() => handleOpenServiceForm()}
+                className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all self-start"
+              >
+                <Plus className="w-4 h-4" /> Créer un nouveau service
+              </button>
+            </div>
+
+            {/* Services Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {services.map(s => (
+                <div 
+                  key={s.key} 
+                  className={`p-6 rounded-2xl bg-black/30 border transition-all flex flex-col justify-between gap-4 ${
+                    s.isPremium ? "border-accent-yellow/40 shadow-[0_4px_20px_rgba(253,221,0,0.05)]" : "border-white/5"
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-serif font-black text-base text-white">{s.title}</h4>
+                        <p className="text-[10px] text-primary-green font-mono uppercase tracking-wider font-bold mt-0.5">Clé : {s.key}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${s.isActive ? "bg-green-950 text-green-300" : "bg-red-950 text-red-300"}`}>
+                          {s.isActive ? "Actif" : "Masqué"}
+                        </span>
+                        {s.isPremium && (
+                          <span className="px-2 py-0.5 rounded-full bg-accent-yellow text-primary-deep font-sans font-black text-[8px] uppercase tracking-wider">
+                            Premium
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs text-accent-yellow italic font-bold">"{s.hook}"</p>
+                      <p className="text-xs text-gray-300 leading-relaxed">{s.problem}</p>
+                    </div>
+
+                    <div className="space-y-1 pt-2">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Points clés :</p>
+                      <ul className="space-y-1">
+                        {s.bullets.map((bullet: string, idx: number) => (
+                          <li key={idx} className="text-xs text-gray-200 flex items-start gap-1">
+                            <span className="text-primary-green">✓</span>
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="text-[11px] text-gray-400 bg-white/5 rounded-lg px-2.5 py-1.5 border border-white/5">
+                      <span className="font-bold text-gray-300">Dispo :</span> {s.availability}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3 mt-auto">
+                    <button
+                      onClick={() => handleToggleServiceStatus(s)}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-gray-300 transition-all cursor-pointer"
+                    >
+                      {s.isActive ? "Masquer" : "Activer"}
+                    </button>
+                    <button
+                      onClick={() => handleOpenServiceForm(s)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white cursor-pointer"
+                      title="Modifier"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteService(s.key)}
+                      className="p-1.5 rounded-lg bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-950/40 cursor-pointer"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {services.length === 0 && (
+                <div className="col-span-3 py-8 text-center text-gray-500 text-sm bg-black/10 border border-dashed border-white/5 rounded-2xl">
+                  Aucun service enregistré pour le moment.
+                </div>
+              )}
+            </div>
+
+            {/* Service Form Modal/Overlay */}
+            {showServiceForm && (
+              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-xl bg-[#0F2214] border border-primary-green/20 rounded-3xl p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[90vh]">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="font-serif text-base font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-primary-green" />
+                      {serviceForm.isNew ? "Créer un Service" : "Modifier le Service"}
+                    </h3>
+                    <button 
+                      onClick={() => setShowServiceForm(false)}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {sError && (
+                    <div className="p-3 bg-red-950/40 border border-red-900/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {sError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveService} className="space-y-4 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Titre du service</label>
+                        <input
+                          type="text"
+                          required
+                          value={serviceForm.title}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="Ex: Formation Pratique"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Clé unique (Slug)</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!serviceForm.isNew}
+                          value={serviceForm.key}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, key: e.target.value }))}
+                          placeholder="Ex: formation_elevage"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Phrase d'accroche (Hook)</label>
+                      <input
+                        type="text"
+                        required
+                        value={serviceForm.hook}
+                        onChange={(e) => setServiceForm(prev => ({ ...prev, hook: e.target.value }))}
+                        placeholder="Ex: La plupart des formations t'apprennent..."
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Description du besoin/problème</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={serviceForm.problem}
+                        onChange={(e) => setServiceForm(prev => ({ ...prev, problem: e.target.value }))}
+                        placeholder="Ex: Beaucoup de cours sont déconnectés..."
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans"
+                      />
+                    </div>
+
+                    {/* Bullets manager */}
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Liste des puces / points clés</label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={serviceForm.bulletInput}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, bulletInput: e.target.value }))}
+                          placeholder="Ajouter une prestation ou compétence enseignée..."
+                          className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddBullet}
+                          className="px-3 py-2 bg-primary-green text-[#07130A] font-bold rounded-xl hover:bg-primary-green/90 transition-all"
+                        >
+                          Ajouter
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 p-3 bg-black/20 border border-white/5 rounded-2xl min-h-[48px]">
+                        {serviceForm.bullets.map((bullet, index) => (
+                          <span key={index} className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white flex items-center gap-1.5">
+                            {bullet}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBullet(index)}
+                              className="text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {serviceForm.bullets.length === 0 && (
+                          <span className="text-[10px] text-gray-500 self-center">Aucune puce ajoutée pour l'instant.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Disponibilité / Format</label>
+                        <input
+                          type="text"
+                          required
+                          value={serviceForm.availability}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, availability: e.target.value }))}
+                          placeholder="Ex: Disponible en présentiel & en ligne"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Texte Bouton d'action (CTA)</label>
+                        <input
+                          type="text"
+                          required
+                          value={serviceForm.cta}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, cta: e.target.value }))}
+                          placeholder="Ex: Je veux me former →"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="sIsPremium"
+                          checked={serviceForm.isPremium}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, isPremium: e.target.checked }))}
+                          className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="sIsPremium" className="text-gray-300 font-bold cursor-pointer">Mettre en valeur (Premium/Jaune)</label>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="sIsActive"
+                          checked={serviceForm.isActive}
+                          onChange={(e) => setServiceForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                          className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="sIsActive" className="text-gray-300 font-bold cursor-pointer">Rendre actif (Visible)</label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-3 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setShowServiceForm(false)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold transition-all cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={sSaving}
+                        className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {sSaving ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

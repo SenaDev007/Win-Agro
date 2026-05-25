@@ -27,7 +27,8 @@ export default function AdminLoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        router.push("/admin/dashboard");
+        const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
+        router.push(isSubdomain ? "/" : "/admin/dashboard");
         router.refresh();
       } else {
         setError(data.error || "Mot de passe incorrect");
@@ -46,7 +47,13 @@ export default function AdminLoginPage() {
 
       {/* Back to website button */}
       <button
-        onClick={() => router.push("/")}
+        onClick={() => {
+          if (typeof window !== "undefined" && window.location.hostname.startsWith("admin.")) {
+            window.location.href = "https://winagrotech.com";
+          } else {
+            router.push("/");
+          }
+        }}
         className="absolute top-6 left-6 text-gray-400 hover:text-white flex items-center gap-2 text-sm transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />

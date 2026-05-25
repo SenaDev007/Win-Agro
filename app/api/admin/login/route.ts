@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
 import { loginAdmin, logoutAdmin } from "@/lib/session";
+import { localStore } from "@/lib/db";
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+
+    // Check if IP is locked
+    const lockout = localStore.isIpLocked(ip);
+    if (lockout.locked) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Trop de tentatives échouées. IP temporairement bloquée pour encore ${lockout.remainingMin} minute(s).` 
+        }, 
+        { status: 429 }
+      );
+    }
+
     const { password } = await request.json();
 
     if (!password) {
@@ -10,6 +25,9 @@ export async function POST(request: Request) {
     }
 
     const verified = await loginAdmin(password);
+
+    // Track the attempt (success or fail)
+    localStore.trackLoginAttempt(ip, verified);
 
     if (verified) {
       return NextResponse.json({ success: true });

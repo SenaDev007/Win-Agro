@@ -20,10 +20,34 @@ export interface CatalogProduct {
   isActive: boolean;
 }
 
+export interface TestimonialRecord {
+  id: string;
+  text: string;
+  highlight: string;
+  image: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+}
+
+export interface ServiceRecord {
+  key: string;
+  title: string;
+  hook: string;
+  problem: string;
+  bullets: string[];
+  availability: string;
+  cta: string;
+  isPremium: boolean;
+  isActive: boolean;
+}
+
 // In-Memory store (persisted for the lifecycle of Next.js dev server, fallback structure)
 class LocalStore {
   private leads: LeadRecord[] = [];
   private products: CatalogProduct[] = [];
+  private testimonials: TestimonialRecord[] = [];
+  private services: ServiceRecord[] = [];
   private adminPasswordOverride: string | null = null;
 
   constructor() {
@@ -81,6 +105,98 @@ class LocalStore {
       { id: "a2", category: "agriculture", name: "Plants d'eucalyptus (lot 50)", description: "Tarif dégressif — idéal pour les grandes parcelles.", price: 10000, unit: "lot 50 plants", isActive: true },
       { id: "a3", category: "agriculture", name: "Plants d'eucalyptus (lot 100)", description: "Meilleur rapport qualité-prix pour projets de reboisement.", price: 18000, unit: "lot 100 plants", isActive: true },
       { id: "a4", category: "agriculture", name: "Autres plants agricoles (lot 10)", description: "Espèces sélectionnées pour nos sols — variétés selon disponibilité saisonnière.", price: 3000, unit: "lot 10 plants", isActive: true }
+    ];
+
+    // Seed testimonials
+    this.testimonials = [
+      {
+        id: "t1",
+        text: "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.",
+        highlight: "Mon taux de mortalité est passé de 30% à 8%",
+        image: "/avatar_chabi.png",
+        name: "Chabi A.",
+        role: "Aviculteur · Parakou, Bénin",
+        isActive: true
+      },
+      {
+        id: "t2",
+        text: "Je suis passée de l'idée à une ferme rentable de 1000 pondeuses en 3 mois. J'avais la volonté d'installer ma ferme, mais j'étais terrifiée par le risque. Win Agro a pris en charge l'étude de faisabilité et l'installation.",
+        highlight: "ferme rentable de 1000 pondeuses en 3 mois",
+        image: "/avatar_pascaline.png",
+        name: "Pascaline M.",
+        role: "Entrepreneuse · Ouidah, Bénin",
+        isActive: true
+      },
+      {
+        id: "t3",
+        text: "Une productivité globale améliorée de 25% sur mon cheptel. Mes lapines avaient des portées faibles. Victoire a revu notre plan de prophylaxie naturelle et introduit des fourrages locaux riches.",
+        highlight: "productivité globale améliorée de 25%",
+        image: "/avatar_romaric.png",
+        name: "Romaric S.",
+        role: "Éleveur de Lapins · Bohicon, Bénin",
+        isActive: true
+      },
+      {
+        id: "t4",
+        text: "Mon rendement de culture a doublé grâce aux semences sélectionnées et au système d'irrigation économique proposé par Win Agro. Les résultats sont visibles dès le premier mois.",
+        highlight: "Mon rendement de culture a doublé",
+        image: "/avatar_sanni.png",
+        name: "Sanni B.",
+        role: "Maraîcher · Malanville, Bénin",
+        isActive: true
+      }
+    ];
+
+    // Seed services
+    this.services = [
+      {
+        key: "formation_elevage",
+        title: "Formation Pratique",
+        hook: "La plupart des formations t'apprennent à prendre des notes. La nôtre t'apprend à ne pas perdre tes animaux.",
+        problem: "Beaucoup de cours sont déconnectés de la réalité du terrain béninois. Tu sors diplômé, mais quand la mortalité frappe ta bande, tu es désarmé.",
+        bullets: [
+          "Élevage de volaille complet (chairs, pondeuses, goliaths, pintades, dindes, cailles)",
+          "Élevage professionnel de lapins (cuniculiculture)",
+          "Élevage porcin rentable",
+          "Formulation de nutrition animale",
+          "Transformation agro-alimentaire locale"
+        ],
+        availability: "Disponible en présentiel & en ligne · Adapté au climat africain",
+        cta: "Je veux me former →",
+        isPremium: false,
+        isActive: true
+      },
+      {
+        key: "installation_ferme",
+        title: "Accompagnement & Installation de Ferme",
+        hook: "Tu arrives avec une idée en tête. Tu repars avec une exploitation agricole qui tourne.",
+        problem: "Tu as un projet d'élevage ou un terrain disponible, mais tu manques de repères pour démarrer et tu ne veux pas gaspiller tes économies.",
+        bullets: [
+          "Étude de faisabilité et plan d'affaires terrain",
+          "Installation complète de tes bâtiments et équipements",
+          "Suivi technique rigoureux post-installation",
+          "Encadrement et formation de tes employés sur place"
+        ],
+        availability: "Accompagnement clé en main de A à Z par Victoire et ses équipes",
+        cta: "Lancer mon projet →",
+        isPremium: true,
+        isActive: true
+      },
+      {
+        key: "consultation",
+        title: "Consultation & Diagnostic",
+        hook: "Ta ferme tourne déjà, mais les résultats ne suivent pas. On va trouver pourquoi.",
+        problem: "Tu investis ton temps et ton argent mais tes marges restent faibles, ou tu fais face à des vagues de pertes inexpliquées.",
+        bullets: [
+          "Audit complet et diagnostic des blocages terrain",
+          "Résolution des problèmes sanitaires et techniques",
+          "Optimisation de tes performances d'alimentation"
+        ],
+        availability: "Intervention rapide, conseils actionnables, résultats garantis",
+        cta: "Demander une consultation →",
+        isPremium: false,
+        isActive: true
+      }
     ];
   }
 
@@ -145,6 +261,119 @@ class LocalStore {
 
   setAdminPassword(password: string) {
     this.adminPasswordOverride = password;
+  }
+
+  // --- Testimonials CRUD ---
+  getTestimonials() {
+    return this.testimonials;
+  }
+
+  addTestimonial(t: Omit<TestimonialRecord, "id">) {
+    const newT: TestimonialRecord = {
+      ...t,
+      id: "t" + (this.testimonials.length + 1)
+    };
+    this.testimonials.push(newT);
+    return newT;
+  }
+
+  updateTestimonial(t: TestimonialRecord) {
+    const index = this.testimonials.findIndex(item => item.id === t.id);
+    if (index !== -1) {
+      this.testimonials[index] = { ...this.testimonials[index], ...t };
+      return true;
+    }
+    return false;
+  }
+
+  deleteTestimonial(id: string) {
+    const index = this.testimonials.findIndex(item => item.id === id);
+    if (index !== -1) {
+      this.testimonials.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // --- Services CRUD ---
+  getServices() {
+    return this.services;
+  }
+
+  addService(s: Omit<ServiceRecord, "key"> & { key?: string }) {
+    const key = s.key || "srv_" + (this.services.length + 1);
+    const newS: ServiceRecord = {
+      ...s,
+      key
+    };
+    this.services.push(newS);
+    return newS;
+  }
+
+  updateService(s: ServiceRecord) {
+    const index = this.services.findIndex(item => item.key === s.key);
+    if (index !== -1) {
+      this.services[index] = { ...this.services[index], ...s };
+      return true;
+    }
+    return false;
+  }
+
+  deleteService(key: string) {
+    const index = this.services.findIndex(item => item.key === key);
+    if (index !== -1) {
+      this.services.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // --- Brute Force Protection (IP Lockout) ---
+  private loginAttempts: Record<string, { count: number; lockedUntil: string | null }> = {};
+
+  trackLoginAttempt(ip: string, success: boolean) {
+    if (!this.loginAttempts[ip]) {
+      this.loginAttempts[ip] = { count: 0, lockedUntil: null };
+    }
+
+    const record = this.loginAttempts[ip];
+
+    // If lockout expired, reset
+    if (record.lockedUntil && new Date(record.lockedUntil) < new Date()) {
+      record.lockedUntil = null;
+    }
+
+    if (success) {
+      record.count = 0;
+      record.lockedUntil = null;
+    } else {
+      record.count += 1;
+      if (record.count >= 15) {
+        record.lockedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h
+      } else if (record.count >= 10) {
+        record.lockedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+      } else if (record.count >= 5) {
+        record.lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15m
+      }
+    }
+  }
+
+  isIpLocked(ip: string): { locked: boolean; remainingMin: number } {
+    const record = this.loginAttempts[ip];
+    if (!record || !record.lockedUntil) {
+      return { locked: false, remainingMin: 0 };
+    }
+
+    const lockedTime = new Date(record.lockedUntil);
+    const now = new Date();
+
+    if (lockedTime > now) {
+      const diffMs = lockedTime.getTime() - now.getTime();
+      return { locked: true, remainingMin: Math.ceil(diffMs / (60 * 1000)) };
+    } else {
+      record.lockedUntil = null;
+      return { locked: false, remainingMin: 0 };
+    }
   }
 }
 
