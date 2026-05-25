@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Tag, Loader2, ArrowLeft, Save, ShieldAlert, Check, CheckCircle2, AlertCircle
+  Tag, Loader2, ArrowLeft, Save, ShieldAlert, Check, CheckCircle2, AlertCircle, Eye
 } from "lucide-react";
 
 export default function AdminCatalogPage() {
@@ -102,12 +102,23 @@ export default function AdminCatalogPage() {
           </div>
         </div>
 
-        {successMsg && (
-          <div className="text-[11px] font-bold text-primary-green bg-primary-green/10 border border-primary-green/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
-            <Check className="w-3.5 h-3.5" />
-            {successMsg}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {successMsg && (
+            <div className="text-[11px] font-bold text-primary-green bg-primary-green/10 border border-primary-green/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
+              <Check className="w-3.5 h-3.5" />
+              {successMsg}
+            </div>
+          )}
+          <a
+            href={typeof window !== "undefined" ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : "/") : "/"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all cursor-pointer border border-white/5"
+          >
+            <Eye className="w-3.5 h-3.5 text-primary-green" />
+            Voir le site
+          </a>
+        </div>
       </header>
 
       <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">

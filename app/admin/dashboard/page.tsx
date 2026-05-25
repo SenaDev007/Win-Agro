@@ -422,6 +422,14 @@ export default function AdminDashboard() {
 
   const { stats: analyticsStats, dailyTrend, trafficSources, topPages, isMock } = data || {};
 
+  const filteredLeads = leads.filter(lead => {
+    if (leadFilter === "all") return true;
+    if (leadFilter === "accompagnement") return lead.type.toLowerCase().includes("accompagnement");
+    if (leadFilter === "formation") return lead.type.toLowerCase().includes("formation");
+    if (leadFilter === "consultation") return lead.type.toLowerCase().includes("consultation");
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#07130A] text-white font-sans flex flex-col">
       {/* Navbar header */}
@@ -679,10 +687,32 @@ export default function AdminDashboard() {
 
         {tab === "leads" && (
           <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="font-serif text-lg font-bold">Liste des contacts clients</h3>
                 <p className="text-xs text-gray-400">Demandes de diagnostic, accompagnement de projet ou inscription formation</p>
+              </div>
+
+              {/* Filter buttons for the different forms */}
+              <div className="flex flex-wrap gap-1.5 bg-black/20 p-1 rounded-2xl border border-white/5">
+                {[
+                  { key: "all", label: "Tous" },
+                  { key: "accompagnement", label: "Accompagnement" },
+                  { key: "formation", label: "Formations" },
+                  { key: "consultation", label: "Diagnostics" }
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setLeadFilter(f.key as any)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                      leadFilter === f.key
+                        ? "bg-primary-green text-[#07130A]"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -700,12 +730,12 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {leads.length === 0 ? (
+                  {filteredLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500">Aucun lead reçu pour le moment</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500">Aucun lead reçu pour ce filtre pour le moment</td>
                     </tr>
                   ) : (
-                    leads.map(lead => (
+                    filteredLeads.map(lead => (
                       <tr key={lead.id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="py-3 px-4 text-gray-400 font-mono whitespace-nowrap">
                           {new Date(lead.date).toLocaleDateString("fr-FR")}
@@ -1321,6 +1351,129 @@ export default function AdminDashboard() {
                         className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold transition-all cursor-pointer disabled:opacity-60"
                       >
                         {sSaving ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "stats" && (
+          <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-6">
+            <div>
+              <h3 className="font-serif text-lg font-bold">Gestion des Chiffres Clés</h3>
+              <p className="text-xs text-gray-400">Modifiez les statistiques et impacts affichés sur la page d'accueil (section Chiffres Clés)</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map(s => (
+                <div key={s.id} className="bg-black/30 border border-white/5 rounded-2xl p-5 flex flex-col justify-between gap-4">
+                  <div>
+                    <p className="text-3xl font-serif font-black text-primary-green">
+                      {s.value}
+                      <span className="text-accent-yellow">{s.suffix}</span>
+                    </p>
+                    <p className="text-xs font-bold text-white mt-1">{s.label}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">{s.subText}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenStatForm(s)}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/5"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-primary-green" />
+                    Modifier
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Stat Edit Modal */}
+            {editingStat && (
+              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-[#0F2214] border border-primary-green/20 rounded-3xl p-6 shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="font-serif text-base font-bold text-white flex items-center gap-1.5">
+                      <Percent className="w-4 h-4 text-primary-green" />
+                      Modifier le Chiffre Clé
+                    </h3>
+                    <button
+                      onClick={() => setEditingStat(null)}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {statError && (
+                    <div className="p-3 bg-red-950/40 border border-red-900/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {statError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveStat} className="space-y-4 text-xs">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Valeur (Nombre)</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingStat.value}
+                          onChange={(e) => setEditingStat((prev: any) => ({ ...prev, value: parseInt(e.target.value) || 0 }))}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 font-semibold">Suffixe (ex: %, +, h)</label>
+                        <input
+                          type="text"
+                          value={editingStat.suffix}
+                          onChange={(e) => setEditingStat((prev: any) => ({ ...prev, suffix: e.target.value }))}
+                          placeholder="Facultatif"
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Libellé principal</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingStat.label}
+                        onChange={(e) => setEditingStat((prev: any) => ({ ...prev, label: e.target.value }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Description secondaire</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={editingStat.subText}
+                        onChange={(e) => setEditingStat((prev: any) => ({ ...prev, subText: e.target.value }))}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-3 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setEditingStat(null)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold transition-all cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={statSaving}
+                        className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-bold transition-all cursor-pointer"
+                      >
+                        {statSaving ? "Enregistrement..." : "Enregistrer"}
                       </button>
                     </div>
                   </form>
