@@ -12,6 +12,7 @@
   "dependencies": {
     "@google-analytics/data": "^6.0.0",
     "@hookform/resolvers": "^5.2.2",
+    "@prisma/client": "^5.22.0",
     "@types/uuid": "^10.0.0",
     "@vercel/blob": "^2.4.0",
     "clsx": "^2.1.1",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { prisma } from "./prisma";
 
 // Win Agro Database interfaces
 export interface LeadRecord {
@@ -70,20 +70,7 @@ export interface FormConfigRecord {
   isActive: boolean;
 }
 
-// Database Connection URL
-const connectionString = process.env.DATABASE_URL || "postgresql://neondb_owner:npg_i6mT2sMkFWth@ep-spring-sun-abljcx2p-pooler.eu-west-2.aws.neon.tech/Win%20Agro?sslmode=require&channel_binding=require";
-
 const globalRef = global as any;
-if (!globalRef.dbPool) {
-  globalRef.dbPool = new Pool({
-    connectionString,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
-}
-
-export const pool = globalRef.dbPool as Pool;
 
 class LocalStore {
   private loginAttempts: Record<string, { count: number; lockedUntil: string | null }> = {};
@@ -97,171 +84,70 @@ class LocalStore {
 
   async initDb() {
     try {
-      // 1. Create DB tables
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS admin_settings (
-          key VARCHAR(100) PRIMARY KEY,
-          value TEXT
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS stats (
-          id VARCHAR(50) PRIMARY KEY,
-          value INTEGER NOT NULL,
-          suffix VARCHAR(10) NOT NULL,
-          label VARCHAR(255) NOT NULL,
-          sub_text TEXT NOT NULL
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS products (
-          id VARCHAR(50) PRIMARY KEY,
-          category VARCHAR(100) NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          description TEXT NOT NULL,
-          price DOUBLE PRECISION,
-          unit VARCHAR(50) NOT NULL,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS testimonials (
-          id VARCHAR(50) PRIMARY KEY,
-          text TEXT NOT NULL,
-          highlight VARCHAR(255) NOT NULL,
-          image TEXT NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          role VARCHAR(255) NOT NULL,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS services (
-          key VARCHAR(100) PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          hook TEXT NOT NULL,
-          problem TEXT NOT NULL,
-          bullets TEXT[] NOT NULL,
-          availability VARCHAR(255) NOT NULL,
-          cta VARCHAR(255) NOT NULL,
-          is_premium BOOLEAN NOT NULL DEFAULT FALSE,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE,
-          form_key VARCHAR(100)
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS form_configs (
-          key VARCHAR(100) PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          hero_bg_url TEXT,
-          description TEXT NOT NULL,
-          fields JSONB NOT NULL,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE
-        )
-      `);
-
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS leads (
-          id VARCHAR(50) PRIMARY KEY,
-          date VARCHAR(100) NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          phone VARCHAR(100) NOT NULL,
-          type VARCHAR(255) NOT NULL,
-          location VARCHAR(255) NOT NULL,
-          details JSONB NOT NULL,
-          status VARCHAR(50) NOT NULL DEFAULT 'new'
-        )
-      `);
-
-      // 2. Seed stats if empty
-      const statsCheck = await pool.query("SELECT COUNT(*) FROM stats");
-      if (parseInt(statsCheck.rows[0].count, 10) === 0) {
+      // 1. Seed stats if empty
+      const statsCheck = await prisma.stat.count();
+      if (statsCheck === 0) {
         const defaultStats = [
-          ["s1", 500, "+", "Porteurs de projets", "Formés et accompagnés vers la réussite sur le terrain."],
-          ["s2", 6, "", "Filières d'élevage", "Maîtrisées de bout en bout avec des méthodes éprouvées."],
-          ["s3", 24, "h", "Délai de réponse", "Garanti pour ne jamais vous laisser seul face aux doutes."],
-          ["s4", 100, "%", "Méthodes naturelles", "Sans aucun intrant chimique pour préserver vos bandes."]
+          { id: "s1", value: 500, suffix: "+", label: "Porteurs de projets", subText: "Formés et accompagnés vers la réussite sur le terrain." },
+          { id: "s2", value: 6, suffix: "", label: "Filières d'élevage", subText: "Maîtrisées de bout en bout avec des méthodes éprouvées." },
+          { id: "s3", value: 24, suffix: "h", label: "Délai de réponse", subText: "Garanti pour ne jamais vous laisser seul face aux doutes." },
+          { id: "s4", value: 100, suffix: "%", label: "Méthodes naturelles", subText: "Sans aucun intrant chimique pour préserver vos bandes." }
         ];
-        for (const s of defaultStats) {
-          await pool.query(
-            "INSERT INTO stats (id, value, suffix, label, sub_text) VALUES ($1, $2, $3, $4, $5)",
-            s as any[]
-          );
-        }
+        await prisma.stat.createMany({ data: defaultStats });
       }
 
-      // 3. Seed products if empty
-      const productsCheck = await pool.query("SELECT COUNT(*) FROM products");
-      if (parseInt(productsCheck.rows[0].count, 10) === 0) {
+      // 2. Seed products if empty
+      const productsCheck = await prisma.product.count();
+      if (productsCheck === 0) {
         const defaultProducts = [
-          ["e1", "elevage", "Poussins d'1 jour — Coquellets (chair)", "Souche adaptée au climat du Bénin, robuste et à croissance rapide.", 850, "sujet", true],
-          ["e2", "elevage", "Poussins d'1 jour — Pondeuses", "Pondeuses haute performance, démarrage optimal garanti.", 950, "sujet", true],
-          ["e3", "elevage", "Pintadeaux", "Excellente souche adaptée à l'élevage familial ou commercial.", 700, "sujet", true],
-          ["e4", "elevage", "Cailletaux", "Élevage rapide, très rentable, idéal pour les débutants.", 650, "sujet", true],
-          ["e5", "elevage", "Lapins reproducteurs", "Races sélectionnées pour leur prolificité et croissance rapide.", 8000, "sujet", true],
-          ["e6", "elevage", "Volailles prêtes à consommer", "Volailles vivantes ou abattues proprement selon votre besoin.", 3500, "sujet", true],
-          ["e7", "elevage", "Œufs de table frais (plateau)", "Collectés chaque matin, fraîcheur garantie.", 3000, "plateau 30", true],
+          { id: "e1", category: "elevage", name: "Poussins d'1 jour — Coquellets (chair)", description: "Souche adaptée au climat du Bénin, robuste et à croissance rapide.", price: 850, unit: "sujet", isActive: true },
+          { id: "e2", category: "elevage", name: "Poussins d'1 jour — Pondeuses", description: "Pondeuses haute performance, démarrage optimal garanti.", price: 950, unit: "sujet", isActive: true },
+          { id: "e3", category: "elevage", name: "Pintadeaux", description: "Excellente souche adaptée à l'élevage familial ou commercial.", price: 700, unit: "sujet", isActive: true },
+          { id: "e4", category: "elevage", name: "Cailletaux", description: "Élevage rapide, très rentable, idéal pour les débutants.", price: 650, unit: "sujet", isActive: true },
+          { id: "e5", category: "elevage", name: "Lapins reproducteurs", description: "Races sélectionnées pour leur prolificité et croissance rapide.", price: 8000, unit: "sujet", isActive: true },
+          { id: "e6", category: "elevage", name: "Volailles prêtes à consommer", description: "Volailles vivantes ou abattues proprement selon votre besoin.", price: 3500, unit: "sujet", isActive: true },
+          { id: "e7", category: "elevage", name: "Œufs de table frais (plateau)", description: "Collectés chaque matin, fraîcheur garantie.", price: 3000, unit: "plateau 30", isActive: true },
           
-          ["n1", "nutrition", "Provende démarrage (0–3 semaines)", "Formule haute densité nutritionnelle pour l'immunité et la croissance initiale.", 12500, "sac 25kg", true],
-          ["n2", "nutrition", "Provende croissance (3–6 semaines)", "Maintien optimal de la croissance et de la conversion alimentaire.", 11000, "sac 25kg", true],
-          ["n3", "nutrition", "Provende finition (>6 semaines)", "Formule économique pour la phase finale avant vente.", 10500, "sac 25kg", true],
-          ["n4", "nutrition", "Provende pondeuse", "Enrichie en calcium pour des œufs solides et une bonne ponte.", 12000, "sac 25kg", true],
-          ["n5", "nutrition", "Formulation personnalisée", "Consultation + formulation sur mesure selon votre élevage.", null, "Sur devis", true],
+          { id: "n1", category: "nutrition", name: "Provende démarrage (0–3 semaines)", description: "Formule haute densité nutritionnelle pour l'immunité et la croissance initiale.", price: 12500, unit: "sac 25kg", isActive: true },
+          { id: "n2", category: "nutrition", name: "Provende croissance (3–6 semaines)", description: "Maintien optimal de la croissance et de la conversion alimentaire.", price: 11000, unit: "sac 25kg", isActive: true },
+          { id: "n3", category: "nutrition", name: "Provende finition (>6 semaines)", description: "Formule économique pour la phase finale avant vente.", price: 10500, unit: "sac 25kg", isActive: true },
+          { id: "n4", category: "nutrition", name: "Provende pondeuse", description: "Enrichie en calcium pour des œufs solides et une bonne ponte.", price: 12000, unit: "sac 25kg", isActive: true },
+          { id: "n5", category: "nutrition", name: "Formulation personnalisée", description: "Consultation + formulation sur mesure selon votre élevage.", price: null, unit: "Sur devis", isActive: true },
           
-          ["a1", "agriculture", "Plants d'eucalyptus (lot 10)", "Vigoureux et adaptés au sol béninois. Reboisement ou vente de bois.", 2500, "lot 10 plants", true],
-          ["a2", "agriculture", "Plants d'eucalyptus (lot 50)", "Tarif dégressif — idéal pour les grandes parcelles.", 10000, "lot 50 plants", true],
-          ["a3", "agriculture", "Plants d'eucalyptus (lot 100)", "Meilleur rapport qualité-prix pour projets de reboisement.", 18000, "lot 100 plants", true],
-          ["a4", "agriculture", "Autres plants agricoles (lot 10)", "Espèces sélectionnées pour nos sols — variétés selon disponibilité saisonnière.", 3000, "lot 10 plants", true]
+          { id: "a1", category: "agriculture", name: "Plants d'eucalyptus (lot 10)", description: "Vigoureux et adaptés au sol béninois. Reboisement ou vente de bois.", price: 2500, unit: "lot 10 plants", isActive: true },
+          { id: "a2", category: "agriculture", name: "Plants d'eucalyptus (lot 50)", description: "Tarif dégressif — idéal pour les grandes parcelles.", price: 10000, unit: "lot 50 plants", isActive: true },
+          { id: "a3", category: "agriculture", name: "Plants d'eucalyptus (lot 100)", description: "Meilleur rapport qualité-prix pour projets de reboisement.", price: 18000, unit: "lot 100 plants", isActive: true },
+          { id: "a4", category: "agriculture", name: "Autres plants agricoles (lot 10)", description: "Espèces sélectionnées pour nos sols — variétés selon disponibilité saisonnière.", price: 3000, unit: "lot 10 plants", isActive: true }
         ];
-        for (const p of defaultProducts) {
-          await pool.query(
-            "INSERT INTO products (id, category, name, description, price, unit, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            p as any[]
-          );
-        }
+        await prisma.product.createMany({ data: defaultProducts });
       }
 
-      // 4. Seed testimonials if empty
-      const testimonialsCheck = await pool.query("SELECT COUNT(*) FROM testimonials");
-      if (parseInt(testimonialsCheck.rows[0].count, 10) === 0) {
+      // 3. Seed testimonials if empty
+      const testimonialsCheck = await prisma.testimonial.count();
+      if (testimonialsCheck === 0) {
         const defaultTestimonials = [
-          ["t1", "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.", "Mon taux de mortalité est passé de 30% à 8%", "/avatar_chabi.png", "Chabi A.", "Aviculteur · Parakou, Bénin", true],
-          ["t2", "Je suis passée de l'idée à une ferme rentable de 1000 pondeuses en 3 mois. J'avais la volonté d'installer ma ferme, mais j'étais terrifiée par le risque. Win Agro a pris en charge l'étude de faisabilité et l'installation.", "ferme rentable de 1000 pondeuses en 3 mois", "/avatar_pascaline.png", "Pascaline M.", "Entrepreneuse · Ouidah, Bénin", true],
-          ["t3", "Une productivité globale améliorée de 25% sur mon cheptel. Mes lapines avaient des portées faibles. Victoire a revu notre plan de prophylaxie naturelle et introduit des fourrages locaux riches.", "productivité globale améliorée de 25%", "/avatar_romaric.png", "Romaric S.", "Éleveur de Lapins · Bohicon, Bénin", true],
-          ["t4", "Mon rendement de culture a doublé grâce aux semences sélectionnées et au système d'irrigation économique proposé par Win Agro. Les résultats sont visibles dès le premier mois.", "Mon rendement de culture a doublé", "/avatar_sanni.png", "Sanni B.", "Maraîcher · Malanville, Bénin", true]
+          { id: "t1", text: "Mon taux de mortalité est passé de 30% à 8% en seulement deux cycles. Je perdais près d'un tiers de mes poussins d'un jour sans comprendre pourquoi. Victoire a diagnostiqué une mauvaise aération et ajusté mes formules.", highlight: "Mon taux de mortalité est passé de 30% à 8%", image: "/avatar_chabi.png", name: "Chabi A.", role: "Aviculteur · Parakou, Bénin", isActive: true },
+          { id: "t2", text: "Je suis passée de l'idée à une ferme rentable de 1000 pondeuses en 3 mois. J'avais la volonté d'installer ma ferme, mais j'étais terrifiée par le risque. Win Agro a pris en charge l'étude de faisabilité et l'installation.", highlight: "ferme rentable de 1000 pondeuses en 3 mois", image: "/avatar_pascaline.png", name: "Pascaline M.", role: "Entrepreneuse · Ouidah, Bénin", isActive: true },
+          { id: "t3", text: "Une productivité globale améliorée de 25% sur mon cheptel. Mes lapines avaient des portées faibles. Victoire a revu notre plan de prophylaxie naturelle et introduit des fourrages locaux riches.", highlight: "productivité globale améliorée de 25%", image: "/avatar_romaric.png", name: "Romaric S.", role: "Éleveur de Lapins · Bohicon, Bénin", isActive: true },
+          { id: "t4", text: "Mon rendement de culture a doublé grâce aux semences sélectionnées et au système d'irrigation économique proposé par Win Agro. Les résultats sont visibles dès le premier mois.", highlight: "Mon rendement de culture a doublé", image: "/avatar_sanni.png", name: "Sanni B.", role: "Maraîcher · Malanville, Bénin", isActive: true }
         ];
-        for (const t of defaultTestimonials) {
-          await pool.query(
-            "INSERT INTO testimonials (id, text, highlight, image, name, role, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            t as any[]
-          );
-        }
+        await prisma.testimonial.createMany({ data: defaultTestimonials });
       }
 
-      // 5. Seed services if empty
-      const servicesCheck = await pool.query("SELECT COUNT(*) FROM services");
-      if (parseInt(servicesCheck.rows[0].count, 10) === 0) {
+      // 4. Seed services if empty
+      const servicesCheck = await prisma.service.count();
+      if (servicesCheck === 0) {
         const defaultServices = [
-          ["formation_elevage", "Formations Élevage Pro", "Ne perds plus ton temps à improviser.", "La plupart des formations t'apprennent la théorie. Chez Win Agro, nous transmettons la réalité brute du terrain avec des ateliers à Porto-Novo (Parakou auparavant) et en ligne.", ["Élevage complet de Volailles & Lapins", "Fabrication d'aliments (provenderie)", "Formules de phytothérapie naturelle", "Gestion financière & rentabilité"], "Disponible en présentiel & en ligne", "Je veux me former →", false, true, "formation"],
-          ["accompagnement_projet", "Accompagnement Clé en Main", "Ton projet, de l'idée jusqu'au premier profit.", "Construire un bâtiment inadapté ou acheter des intrants trop chers peut ruiner ton projet d'élevage avant même qu'il ne démarre. Nous planifions, installons et gérons ta ferme.", ["Étude de faisabilité technique & financière", "Supervision de la construction des poulaillers", "Suivi quotidien de ta première bande", "Mise en relation avec notre réseau de vente"], "Disponible sur toute l'étendue du Bénin", "Lancer mon élevage →", true, true, "accompagnement"],
-          ["diagnostic_consultation", "Consultation & Diagnostic", "Un problème d'élevage à résoudre immédiatement ?", "Mortalité inexpliquée, ponte faible, provende inefficace... Chaque jour d'attente te coûte des centaines de mille. Nous intervenons en urgence pour redresser la barre.", ["Analyse de biosécurité & d'aération", "Ajustement des rations alimentaires", "Audit de prophylaxie & traitements bio", "Rapport de recommandations exploitables"], "Déplacement sur site ou télé-diagnostic", "Demander un diagnostic →", false, true, "consultation"]
+          { key: "formation_elevage", title: "Formations Élevage Pro", hook: "Ne perds plus ton temps à improviser.", problem: "La plupart des formations t'apprennent la théorie. Chez Win Agro, nous transmettons la réalité brute du terrain avec des ateliers à Porto-Novo (Parakou auparavant) et en ligne.", bullets: ["Élevage complet de Volailles & Lapins", "Fabrication d'aliments (provenderie)", "Formules de phytothérapie naturelle", "Gestion financière & rentabilité"], availability: "Disponible en présentiel & en ligne", cta: "Je veux me former →", isPremium: false, isActive: true, formKey: "formation" },
+          { key: "accompagnement_projet", title: "Accompagnement Clé en Main", hook: "Ton projet, de l'idée jusqu'au premier profit.", problem: "Construire un bâtiment inadapté ou acheter des intrants trop chers peut ruiner ton projet d'élevage avant même qu'il ne démarre. Nous planifions, installons et gérons ta ferme.", bullets: ["Étude de faisabilité technique & financière", "Supervision de la construction des poulaillers", "Suivi quotidien de ta première bande", "Mise en relation avec notre réseau de vente"], availability: "Disponible sur toute l'étendue du Bénin", cta: "Lancer mon élevage →", isPremium: true, isActive: true, formKey: "accompagnement" },
+          { key: "diagnostic_consultation", title: "Consultation & Diagnostic", hook: "Un problème d'élevage à résoudre immédiatement ?", problem: "Mortalité inexpliquée, ponte faible, provende inefficace... Chaque jour d'attente te coûte des centaines de mille. Nous intervenons en urgence pour redresser la barre.", bullets: ["Analyse de biosécurité & d'aération", "Ajustement des rations alimentaires", "Audit de prophylaxie & traitements bio", "Rapport de recommandations exploitables"], availability: "Déplacement sur site ou télé-diagnostic", cta: "Demander un diagnostic →", isPremium: false, isActive: true, formKey: "consultation" }
         ];
-        for (const s of defaultServices) {
-          await pool.query(
-            "INSERT INTO services (key, title, hook, problem, bullets, availability, cta, is_premium, is_active, form_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-            s as any[]
-          );
-        }
+        await prisma.service.createMany({ data: defaultServices });
       }
 
-      // 6. Seed form configs if empty
-      const formsCheck = await pool.query("SELECT COUNT(*) FROM form_configs");
-      if (parseInt(formsCheck.rows[0].count, 10) === 0) {
+      // 5. Seed form configs if empty
+      const formsCheck = await prisma.formConfig.count();
+      if (formsCheck === 0) {
         const defaultForms = [
           {
             key: "accompagnement",
@@ -303,33 +189,45 @@ class LocalStore {
           }
         ];
         for (const f of defaultForms) {
-          await pool.query(
-            "INSERT INTO form_configs (key, title, hero_bg_url, description, fields, is_active) VALUES ($1, $2, $3, $4, $5, $6)",
-            [f.key, f.title, f.heroBgUrl, f.description, JSON.stringify(f.fields), f.isActive]
-          );
+          await prisma.formConfig.create({
+            data: {
+              key: f.key,
+              title: f.title,
+              heroBgUrl: f.heroBgUrl,
+              description: f.description,
+              isActive: f.isActive,
+              fields: f.fields as any
+            }
+          });
         }
       }
     } catch (err: any) {
-      if (err.code === "23505" || err.message?.includes("already exists")) {
-        // Table/type was created by a concurrent connection/worker, ignore
+      if (
+        err.code === "23505" ||
+        err.code === "P2002" ||
+        err.message?.includes("already exists") ||
+        err.message?.includes("Unique constraint")
+      ) {
         return;
       }
       console.error("Database initialization failed:", err);
     }
   }
 
-  // --- Leads SQL CRUD ---
+  // --- Leads CRUD ---
   async getLeads(): Promise<LeadRecord[]> {
-    const res = await pool.query("SELECT * FROM leads ORDER BY date DESC");
-    return res.rows.map(row => ({
-      id: row.id,
-      date: row.date,
-      name: row.name,
-      phone: row.phone,
-      type: row.type,
-      location: row.location,
-      details: row.details,
-      status: row.status
+    const leads = await prisma.lead.findMany({
+      orderBy: { date: "desc" }
+    });
+    return leads.map(l => ({
+      id: l.id,
+      date: l.date,
+      name: l.name,
+      phone: l.phone,
+      type: l.type,
+      location: l.location,
+      details: l.details as Record<string, string>,
+      status: l.status as LeadRecord["status"]
     }));
   }
 
@@ -338,207 +236,325 @@ class LocalStore {
     const date = new Date().toISOString();
     const status = "new";
 
-    await pool.query(
-      "INSERT INTO leads (id, date, name, phone, type, location, details, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-      [id, date, lead.name, lead.phone, lead.type, lead.location, JSON.stringify(lead.details), status]
-    );
+    await prisma.lead.create({
+      data: {
+        id,
+        date,
+        name: lead.name,
+        phone: lead.phone,
+        type: lead.type,
+        location: lead.location,
+        details: lead.details as any,
+        status
+      }
+    });
 
     return { ...lead, id, date, status };
   }
 
   async updateLeadStatus(id: string, status: LeadRecord["status"]): Promise<boolean> {
-    const res = await pool.query("UPDATE leads SET status = $1 WHERE id = $2", [status, id]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.lead.update({
+        where: { id },
+        data: { status }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  // --- Catalog SQL CRUD ---
+  // --- Catalog CRUD ---
   async getProducts(): Promise<CatalogProduct[]> {
-    const res = await pool.query("SELECT * FROM products ORDER BY id");
-    return res.rows.map(row => ({
-      id: row.id,
-      category: row.category,
-      name: row.name,
-      description: row.description,
-      price: row.price,
-      unit: row.unit,
-      isActive: row.is_active
-    }));
+    const products = await prisma.product.findMany({
+      orderBy: { id: "asc" }
+    });
+    return products;
   }
 
   async updateProductPriceAndStatus(id: string, price: number | null, isActive: boolean): Promise<boolean> {
-    const res = await pool.query(
-      "UPDATE products SET price = $1, is_active = $2 WHERE id = $3",
-      [price, isActive, id]
-    );
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.product.update({
+        where: { id },
+        data: { price, isActive }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async updateProductPrice(id: string, price: number | null): Promise<boolean> {
-    const res = await pool.query("UPDATE products SET price = $1 WHERE id = $2", [price, id]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.product.update({
+        where: { id },
+        data: { price }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async updateProductStatus(id: string, isActive: boolean): Promise<boolean> {
-    const res = await pool.query("UPDATE products SET is_active = $1 WHERE id = $2", [isActive, id]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.product.update({
+        where: { id },
+        data: { isActive }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  // --- Admin Settings SQL ---
+  // --- Admin Settings ---
   async getAdminPassword(): Promise<string | null> {
-    const res = await pool.query("SELECT value FROM admin_settings WHERE key = 'admin_password'");
-    return res.rows[0]?.value || null;
+    const setting = await prisma.adminSetting.findUnique({
+      where: { key: "admin_password" }
+    });
+    return setting?.value || null;
   }
 
   async setAdminPassword(password: string): Promise<void> {
-    await pool.query(
-      "INSERT INTO admin_settings (key, value) VALUES ('admin_password', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-      [password]
-    );
+    await prisma.adminSetting.upsert({
+      where: { key: "admin_password" },
+      update: { value: password },
+      create: { key: "admin_password", value: password }
+    });
   }
 
   async getAdminEmail(): Promise<string | null> {
-    const res = await pool.query("SELECT value FROM admin_settings WHERE key = 'admin_email'");
-    return res.rows[0]?.value || null;
+    const setting = await prisma.adminSetting.findUnique({
+      where: { key: "admin_email" }
+    });
+    return setting?.value || null;
   }
 
   async setAdminEmail(email: string): Promise<void> {
-    await pool.query(
-      "INSERT INTO admin_settings (key, value) VALUES ('admin_email', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-      [email]
-    );
+    await prisma.adminSetting.upsert({
+      where: { key: "admin_email" },
+      update: { value: email },
+      create: { key: "admin_email", value: email }
+    });
   }
 
-  // --- Testimonials SQL CRUD ---
+  // --- Testimonials CRUD ---
   async getTestimonials(): Promise<TestimonialRecord[]> {
-    const res = await pool.query("SELECT * FROM testimonials ORDER BY id");
-    return res.rows.map(row => ({
-      id: row.id,
-      text: row.text,
-      highlight: row.highlight,
-      image: row.image,
-      name: row.name,
-      role: row.role,
-      isActive: row.is_active
-    }));
+    const list = await prisma.testimonial.findMany({
+      orderBy: { id: "asc" }
+    });
+    return list;
   }
 
   async addTestimonial(t: Omit<TestimonialRecord, "id">): Promise<TestimonialRecord> {
     const randId = "t_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
-    await pool.query(
-      "INSERT INTO testimonials (id, text, highlight, image, name, role, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-      [randId, t.text, t.highlight, t.image, t.name, t.role, t.isActive]
-    );
+    await prisma.testimonial.create({
+      data: {
+        id: randId,
+        text: t.text,
+        highlight: t.highlight,
+        image: t.image,
+        name: t.name,
+        role: t.role,
+        isActive: t.isActive
+      }
+    });
     return { ...t, id: randId };
   }
 
   async updateTestimonial(t: TestimonialRecord): Promise<boolean> {
-    const res = await pool.query(
-      "UPDATE testimonials SET text = $1, highlight = $2, image = $3, name = $4, role = $5, is_active = $6 WHERE id = $7",
-      [t.text, t.highlight, t.image, t.name, t.role, t.isActive, t.id]
-    );
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.testimonial.update({
+        where: { id: t.id },
+        data: {
+          text: t.text,
+          highlight: t.highlight,
+          image: t.image,
+          name: t.name,
+          role: t.role,
+          isActive: t.isActive
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async deleteTestimonial(id: string): Promise<boolean> {
-    const res = await pool.query("DELETE FROM testimonials WHERE id = $1", [id]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.testimonial.delete({
+        where: { id }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  // --- Services SQL CRUD ---
+  // --- Services CRUD ---
   async getServices(): Promise<ServiceRecord[]> {
-    const res = await pool.query("SELECT * FROM services ORDER BY key");
-    return res.rows.map(row => ({
-      key: row.key,
-      title: row.title,
-      hook: row.hook,
-      problem: row.problem,
-      bullets: row.bullets,
-      availability: row.availability,
-      cta: row.cta,
-      isPremium: row.is_premium,
-      isActive: row.is_active,
-      formKey: row.form_key || undefined
+    const srvs = await prisma.service.findMany({
+      orderBy: { key: "asc" }
+    });
+    return srvs.map(s => ({
+      key: s.key,
+      title: s.title,
+      hook: s.hook,
+      problem: s.problem,
+      bullets: s.bullets,
+      availability: s.availability,
+      cta: s.cta,
+      isPremium: s.isPremium,
+      isActive: s.isActive,
+      formKey: s.formKey || undefined
     }));
   }
 
   async addService(s: Omit<ServiceRecord, "key"> & { key?: string }): Promise<ServiceRecord> {
     const key = s.key || "srv_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
-    await pool.query(
-      "INSERT INTO services (key, title, hook, problem, bullets, availability, cta, is_premium, is_active, form_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-      [key, s.title, s.hook, s.problem, s.bullets, s.availability, s.cta, s.isPremium, s.isActive, s.formKey || null]
-    );
+    await prisma.service.create({
+      data: {
+        key,
+        title: s.title,
+        hook: s.hook,
+        problem: s.problem,
+        bullets: s.bullets,
+        availability: s.availability,
+        cta: s.cta,
+        isPremium: s.isPremium,
+        isActive: s.isActive,
+        formKey: s.formKey || null
+      }
+    });
     return { ...s, key };
   }
 
   async updateService(s: ServiceRecord): Promise<boolean> {
-    const res = await pool.query(
-      "UPDATE services SET title = $1, hook = $2, problem = $3, bullets = $4, availability = $5, cta = $6, is_premium = $7, is_active = $8, form_key = $9 WHERE key = $10",
-      [s.title, s.hook, s.problem, s.bullets, s.availability, s.cta, s.isPremium, s.isActive, s.formKey || null, s.key]
-    );
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.service.update({
+        where: { key: s.key },
+        data: {
+          title: s.title,
+          hook: s.hook,
+          problem: s.problem,
+          bullets: s.bullets,
+          availability: s.availability,
+          cta: s.cta,
+          isPremium: s.isPremium,
+          isActive: s.isActive,
+          formKey: s.formKey || null
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async deleteService(key: string): Promise<boolean> {
-    const res = await pool.query("DELETE FROM services WHERE key = $1", [key]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.service.delete({
+        where: { key }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  // --- Stats SQL CRUD ---
+  // --- Stats CRUD ---
   async getStats(): Promise<StatRecord[]> {
-    const res = await pool.query("SELECT * FROM stats ORDER BY id");
-    return res.rows.map(row => ({
-      id: row.id,
-      value: row.value,
-      suffix: row.suffix,
-      label: row.label,
-      subText: row.sub_text
-    }));
+    const list = await prisma.stat.findMany({
+      orderBy: { id: "asc" }
+    });
+    return list;
   }
 
   async updateStat(s: StatRecord): Promise<boolean> {
-    const res = await pool.query(
-      "UPDATE stats SET value = $1, suffix = $2, label = $3, sub_text = $4 WHERE id = $5",
-      [s.value, s.suffix, s.label, s.subText, s.id]
-    );
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.stat.update({
+        where: { id: s.id },
+        data: {
+          value: s.value,
+          suffix: s.suffix,
+          label: s.label,
+          subText: s.subText
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  // --- Form configs SQL CRUD ---
+  // --- Form configs CRUD ---
   async getFormConfigs(): Promise<FormConfigRecord[]> {
-    const res = await pool.query("SELECT * FROM form_configs ORDER BY key");
-    return res.rows.map(row => ({
-      key: row.key,
-      title: row.title,
-      heroBgUrl: row.hero_bg_url || undefined,
-      description: row.description,
-      fields: Array.isArray(row.fields) ? row.fields : JSON.parse(JSON.stringify(row.fields)),
-      isActive: row.is_active
+    const list = await prisma.formConfig.findMany({
+      orderBy: { key: "asc" }
+    });
+    return list.map(f => ({
+      key: f.key,
+      title: f.title,
+      heroBgUrl: f.heroBgUrl || undefined,
+      description: f.description,
+      fields: f.fields as unknown as FormField[],
+      isActive: f.isActive
     }));
   }
 
   async addFormConfig(config: FormConfigRecord): Promise<boolean> {
-    const check = await pool.query("SELECT COUNT(*) FROM form_configs WHERE key = $1", [config.key]);
-    if (parseInt(check.rows[0].count, 10) === 0) {
-      await pool.query(
-        "INSERT INTO form_configs (key, title, hero_bg_url, description, fields, is_active) VALUES ($1, $2, $3, $4, $5, $6)",
-        [config.key, config.title, config.heroBgUrl || null, config.description, JSON.stringify(config.fields), config.isActive]
-      );
-      return true;
+    try {
+      const check = await prisma.formConfig.count({
+        where: { key: config.key }
+      });
+      if (check === 0) {
+        await prisma.formConfig.create({
+          data: {
+            key: config.key,
+            title: config.title,
+            heroBgUrl: config.heroBgUrl || null,
+            description: config.description,
+            fields: config.fields as any,
+            isActive: config.isActive
+          }
+        });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   }
 
   async updateFormConfig(config: FormConfigRecord): Promise<boolean> {
-    const res = await pool.query(
-      "UPDATE form_configs SET title = $1, hero_bg_url = $2, description = $3, fields = $4, is_active = $5 WHERE key = $6",
-      [config.title, config.heroBgUrl || null, config.description, JSON.stringify(config.fields), config.isActive, config.key]
-    );
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.formConfig.update({
+        where: { key: config.key },
+        data: {
+          title: config.title,
+          heroBgUrl: config.heroBgUrl || null,
+          description: config.description,
+          fields: config.fields as any,
+          isActive: config.isActive
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async deleteFormConfig(key: string): Promise<boolean> {
-    const res = await pool.query("DELETE FROM form_configs WHERE key = $1", [key]);
-    return (res.rowCount ?? 0) > 0;
+    try {
+      await prisma.formConfig.delete({
+        where: { key }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // --- Brute Force Protection (In-memory is sufficient) ---

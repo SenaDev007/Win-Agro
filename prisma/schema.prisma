@@ -1,0 +1,88 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdminSetting {
+  key   String @id
+  value String
+
+  @@map("admin_settings")
+}
+
+model Stat {
+  id      String @id
+  value   Int
+  suffix  String
+  label   String
+  subText String @map("sub_text")
+
+  @@map("stats")
+}
+
+model Product {
+  id          String   @id
+  category    String
+  name        String
+  description String
+  price       Float?
+  unit        String
+  isActive    Boolean  @default(true) @map("is_active")
+
+  @@map("products")
+}
+
+model Testimonial {
+  id        String   @id
+  text      String
+  highlight String
+  image     String
+  name      String
+  role      String
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@map("testimonials")
+}
+
+model Service {
+  key          String   @id
+  title        String
+  hook         String
+  problem      String
+  bullets      String[]
+  availability String
+  cta          String
+  isPremium    Boolean  @default(false) @map("is_premium")
+  isActive     Boolean  @default(true) @map("is_active")
+  formKey      String?  @map("form_key")
+
+  @@map("services")
+}
+
+model FormConfig {
+  key         String   @id
+  title       String
+  heroBgUrl   String?  @map("hero_bg_url")
+  description String
+  fields      Json
+  isActive    Boolean  @default(true) @map("is_active")
+
+  @@map("form_configs")
+}
+
+model Lead {
+  id       String @id
+  date     String
+  name     String
+  phone    String
+  type     String
+  location String
+  details  Json
+  status   String @default("new")
+
+  @@map("leads")
+}
