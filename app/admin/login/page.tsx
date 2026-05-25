@@ -3,10 +3,11 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Lock, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, ArrowLeft, Mail } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ export default function AdminLoginPage() {
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -31,7 +32,7 @@ export default function AdminLoginPage() {
         router.push(isSubdomain ? "/" : "/admin/dashboard");
         router.refresh();
       } else {
-        setError(data.error || "Mot de passe incorrect");
+        setError(data.error || "Identifiants incorrects");
       }
     } catch (err) {
       setError("Une erreur est survenue lors de la connexion");
@@ -79,11 +80,30 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-primary-green uppercase tracking-wider">
+              Adresse e-mail
+            </label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-3.5 text-gray-500">
+                <Mail className="w-4 h-4" />
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Ex: contact@winagrotech.com"
+                required
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-primary-green/20 bg-black/40 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50 transition-all font-sans placeholder:text-gray-600"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-primary-green uppercase tracking-wider">
               Mot de passe d'accès
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-3 text-gray-500">
-                <Lock className="w-4.5 h-4.5" />
+              <span className="absolute left-3.5 top-3.5 text-gray-500">
+                <Lock className="w-4 h-4" />
               </span>
               <input
                 type={showPassword ? "text" : "password"}
@@ -96,9 +116,9 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3 text-gray-500 hover:text-white cursor-pointer transition-colors"
+                className="absolute right-3.5 top-3.5 text-gray-500 hover:text-white cursor-pointer transition-colors"
               >
-                {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>

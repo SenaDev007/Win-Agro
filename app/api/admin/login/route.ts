@@ -18,13 +18,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const { password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!password) {
-      return NextResponse.json({ success: false, error: "Mot de passe requis" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ success: false, error: "Adresse email et mot de passe requis" }, { status: 400 });
     }
 
-    const verified = await loginAdmin(password);
+    const verified = await loginAdmin(email, password);
 
     // Track the attempt (success or fail)
     localStore.trackLoginAttempt(ip, verified);
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (verified) {
       return NextResponse.json({ success: true });
     } else {
-      return NextResponse.json({ success: false, error: "Mot de passe d'accès invalide" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Identifiants d'accès invalides" }, { status: 401 });
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });

@@ -25,11 +25,14 @@ export async function decrypt(input: string): Promise<any> {
   }
 }
 
-export async function loginAdmin(password: string) {
+export async function loginAdmin(email: string, password: string) {
   const { localStore } = require("./db");
-  const override = localStore.getAdminPassword();
-  const adminPassword = override || process.env.ADMIN_PASSWORD || "WinAgroAdmin2026!";
-  if (password !== adminPassword) {
+  const overrideEmail = localStore.getAdminEmail();
+  const overridePass = localStore.getAdminPassword();
+  const adminEmail = overrideEmail || process.env.ADMIN_EMAIL || "contact@winagrotech.com";
+  const adminPassword = overridePass || process.env.ADMIN_PASSWORD || "WinAgroAdmin2026!";
+
+  if (email.toLowerCase().trim() !== adminEmail.toLowerCase().trim() || password !== adminPassword) {
     return false;
   }
 

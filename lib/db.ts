@@ -49,6 +49,7 @@ class LocalStore {
   private testimonials: TestimonialRecord[] = [];
   private services: ServiceRecord[] = [];
   private adminPasswordOverride: string | null = null;
+  private adminEmailOverride: string | null = null;
 
   constructor() {
     this.leads = [
@@ -261,6 +262,14 @@ class LocalStore {
 
   setAdminPassword(password: string) {
     this.adminPasswordOverride = password;
+  }
+
+  getAdminEmail() {
+    return this.adminEmailOverride;
+  }
+
+  setAdminEmail(email: string) {
+    this.adminEmailOverride = email;
   }
 
   // --- Testimonials CRUD ---

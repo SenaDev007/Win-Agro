@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   
   const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services">("analytics");
 
+  const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passLoading, setPassLoading] = useState(false);
   const [passMessage, setPassMessage] = useState("");
@@ -125,7 +126,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const handleUpdateCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassLoading(true);
     setPassMessage("");
@@ -135,12 +136,13 @@ export default function AdminDashboard() {
       const res = await fetch("/api/admin/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({ newEmail: newEmail || undefined, newPassword: newPassword || undefined })
       });
       const data = await res.json();
       if (data.success) {
-        setPassMessage("Mot de passe mis à jour avec succès !");
+        setPassMessage("Identifiants mis à jour avec succès !");
         setNewPassword("");
+        setNewEmail("");
       } else {
         setPassError(data.error || "Erreur de validation");
       }
@@ -686,25 +688,33 @@ export default function AdminDashboard() {
 
             {/* Password Update Section inside dashboard */}
             <div className="mt-10 pt-8 border-t border-white/5 max-w-md">
-              <h4 className="font-serif text-sm font-bold text-white mb-2">Modifier le mot de passe d'accès</h4>
-              <p className="text-[10px] text-gray-400 mb-4">Mettez à jour le mot de passe d'administration par défaut pour renforcer la sécurité.</p>
+              <h4 className="font-serif text-sm font-bold text-white mb-2">Modifier les identifiants d'accès</h4>
+              <p className="text-[10px] text-gray-400 mb-4">Mettez à jour votre adresse e-mail ou votre mot de passe d'administration pour renforcer la sécurité.</p>
               
-              <form onSubmit={handleUpdatePassword} className="flex gap-2">
+              <form onSubmit={handleUpdateCredentials} className="space-y-3">
                 <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Nouveau mot de passe"
-                  required
-                  className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Nouvelle adresse e-mail d'accès"
+                  className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
                 />
-                <button
-                  type="submit"
-                  disabled={passLoading}
-                  className="px-4 py-2 bg-primary-green hover:bg-primary-green/90 text-[#07130A] text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {passLoading ? "Mise à jour..." : "Enregistrer"}
-                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Nouveau mot de passe"
+                    className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                  />
+                  <button
+                    type="submit"
+                    disabled={passLoading}
+                    className="px-4 py-2 bg-primary-green hover:bg-primary-green/90 text-[#07130A] text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {passLoading ? "Mise à jour..." : "Enregistrer"}
+                  </button>
+                </div>
               </form>
 
               {passMessage && (
