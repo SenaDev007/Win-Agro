@@ -6,6 +6,7 @@ export interface LeadRecord {
   date: string;
   name: string;
   phone: string;
+  email?: string | null;
   type: string;
   location: string;
   details: Record<string, string>;
@@ -231,6 +232,7 @@ class LocalStore {
       date: l.date,
       name: l.name,
       phone: l.phone,
+      email: l.email || null,
       type: l.type,
       location: l.location,
       details: l.details as Record<string, string>,
