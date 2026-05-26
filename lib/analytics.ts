@@ -29,7 +29,10 @@ export async function getAnalyticsData() {
         deviceType: true,
         browser: true,
         country: true,
-        city: true
+        city: true,
+        utmSource: true,
+        utmMedium: true,
+        utmCampaign: true
       }
     });
 
@@ -183,6 +186,75 @@ export async function getAnalyticsData() {
       .sort((a, b) => b.users - a.users)
       .slice(0, 15);
 
+    // --- Campaign Metrics ---
+    const campaignsMap: Record<string, { sessions: number; leads: number }> = {};
+
+    // First count UTM sessions
+    allPageViews.forEach(pv => {
+      if (pv.utmSource) {
+        const source = pv.utmSource;
+        if (!campaignsMap[source]) {
+          campaignsMap[source] = { sessions: 0, leads: 0 };
+        }
+        campaignsMap[source].sessions += 1;
+      }
+    });
+
+    // Also get all leads with UTM sources in the last 30 days to calculate campaign conversion
+    const recentLeads = await prisma.lead.findMany({
+      where: {
+        date: {
+          gte: thirtyDaysAgo.toISOString()
+        }
+      },
+      select: {
+        id: true,
+        utmSource: true,
+        type: true,
+        sessionToken: true
+      }
+    });
+
+    recentLeads.forEach(lead => {
+      if (lead.utmSource && campaignsMap[lead.utmSource]) {
+        campaignsMap[lead.utmSource].leads += 1;
+      }
+    });
+
+    const marketingCampaigns = Object.entries(campaignsMap)
+      .map(([source, item]) => ({
+        source,
+        sessions: item.sessions,
+        leads: item.leads,
+        conversionRate: item.sessions > 0 ? parseFloat(((item.leads / item.sessions) * 100).toFixed(1)) : 0
+      }))
+      .sort((a, b) => b.sessions - a.sessions);
+
+    // --- Conversion Funnel (Unified telemetry path logs) ---
+    // Step 1: Total visitors (unique sessions)
+    const funnelVisitors = uniqueSessions;
+
+    // Step 2: Visitors who opened a modal (tracked under virtual paths: /modal/open/choice, /modal/open/accompagnement, etc.)
+    const modalSessions = new Set<string>();
+    allPageViews.forEach(pv => {
+      if (pv.path && pv.path.startsWith("/modal/open/")) {
+        modalSessions.add(pv.sessionToken);
+      }
+    });
+    const funnelOpenedModal = modalSessions.size;
+
+    // Step 3: Visitors who successfully submitted the form (total leads)
+    const funnelSubmitted = recentLeads.length;
+
+    const conversionFunnel = {
+      visitors: funnelVisitors,
+      openedModal: funnelOpenedModal,
+      submitted: funnelSubmitted,
+      openRate: funnelVisitors > 0 ? parseFloat(((funnelOpenedModal / funnelVisitors) * 100).toFixed(1)) : 0,
+      submitRate: funnelOpenedModal > 0 ? parseFloat(((funnelSubmitted / funnelOpenedModal) * 100).toFixed(1)) : 0,
+      overallConversionRate: funnelVisitors > 0 ? parseFloat(((funnelSubmitted / funnelVisitors) * 100).toFixed(1)) : 0
+    };
+
     return {
       success: true,
       stats,
@@ -191,7 +263,9 @@ export async function getAnalyticsData() {
       topPages,
       genders,      // Represents Device Type now
       ageBrackets,  // Represents Browsers now
-      locations
+      locations,
+      marketingCampaigns,
+      conversionFunnel
     };
   } catch (error: any) {
     console.error("❌ Error fetching database analytics:", error);
@@ -204,7 +278,39 @@ export async function getAnalyticsData() {
       topPages: [],
       genders: [],
       ageBrackets: [],
-      locations: []
+      locations: [],
+      marketingCampaigns: [],
+      conversionFunnel: { visitors: 0, openedModal: 0, submitted: 0, openRate: 0, submitRate: 0, overallConversionRate: 0 }
     };
   }
 }
+
+/**
+ * Fetch a session's page navigation history.
+ */
+export async function getSessionTimeline(sessionToken: string) {
+  try {
+    const pageViews = await prisma.pageView.findMany({
+      where: { sessionToken },
+      orderBy: { timestamp: "asc" },
+      select: {
+        timestamp: true,
+        path: true,
+        utmSource: true,
+        utmMedium: true,
+        utmCampaign: true
+      }
+    });
+    return pageViews.map(pv => ({
+      timestamp: pv.timestamp.toISOString(),
+      path: pv.path,
+      utmSource: pv.utmSource,
+      utmMedium: pv.utmMedium,
+      utmCampaign: pv.utmCampaign
+    }));
+  } catch (error) {
+    console.error("❌ Error fetching session timeline:", error);
+    return [];
+  }
+}
+

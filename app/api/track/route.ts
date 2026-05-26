@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { path, referrer, sessionToken } = body;
+    const { path, referrer, sessionToken, utmSource, utmMedium, utmCampaign } = body;
 
     if (!sessionToken || !path) {
       return NextResponse.json({ success: false, error: "Token et chemin requis" }, { status: 400 });
@@ -31,7 +31,10 @@ export async function POST(request: Request) {
         deviceType,
         browser,
         country,
-        city
+        city,
+        utmSource: utmSource || null,
+        utmMedium: utmMedium || null,
+        utmCampaign: utmCampaign || null
       },
       create: {
         token: sessionToken,
@@ -40,7 +43,10 @@ export async function POST(request: Request) {
         deviceType,
         browser,
         country,
-        city
+        city,
+        utmSource: utmSource || null,
+        utmMedium: utmMedium || null,
+        utmCampaign: utmCampaign || null
       }
     });
 
@@ -54,7 +60,10 @@ export async function POST(request: Request) {
         deviceType,
         browser,
         country,
-        city
+        city,
+        utmSource: utmSource || null,
+        utmMedium: utmMedium || null,
+        utmCampaign: utmCampaign || null
       }
     });
 

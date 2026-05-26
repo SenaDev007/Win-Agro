@@ -98,11 +98,31 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
       .catch(err => console.error("Error fetching form configurations:", err));
   }, []);
 
+  const trackVirtualPage = (stagePath: string) => {
+    if (typeof window === "undefined") return;
+    const token = sessionStorage.getItem("win_agro_session");
+    if (!token) return;
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: stagePath,
+        referrer: null,
+        sessionToken: token,
+        utmSource: sessionStorage.getItem("win_agro_utm_source"),
+        utmMedium: sessionStorage.getItem("win_agro_utm_medium"),
+        utmCampaign: sessionStorage.getItem("win_agro_utm_campaign")
+      })
+    }).catch(err => console.warn("Failed to send virtual stage tracking:", err));
+  };
+
   // Sync state when opened or reset on close
   useEffect(() => {
     if (isOpen) {
       setPath(initialPath);
       setStep(initialPath ? "form" : "choice");
+      // Track virtual modal open
+      trackVirtualPage(initialPath ? `/modal/open/${initialPath}` : "/modal/open/choice");
     } else {
       setTimeout(() => {
         setPath(initialPath);
@@ -135,6 +155,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
   const handleChoose = (choice: string) => {
     setPath(choice);
     setStep("form");
+    trackVirtualPage(`/modal/open/${choice}`);
   };
 
   const handleBack = () => {
@@ -158,12 +179,22 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
     setLoading(true);
     try {
       if (!path) return;
+      
+      const token = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_session") : null;
+      const utmSource = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_source") : null;
+      const utmMedium = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_medium") : null;
+      const utmCampaign = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_campaign") : null;
+
       const payload: Record<string, any> = {
         type: path,
         prenom: form.prenom,
         nom: form.nom,
         whatsapp: form.whatsapp,
         ville: form.ville,
+        sessionToken: token || undefined,
+        utmSource: utmSource || undefined,
+        utmMedium: utmMedium || undefined,
+        utmCampaign: utmCampaign || undefined
       };
 
       // Add extra form fields to payload

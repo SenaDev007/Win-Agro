@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { 
   BarChart3, Users, Clock, Percent, AlertCircle, Phone, MapPin, 
   Tag, Loader2, LogOut, CheckCircle2, ChevronRight, Eye, RefreshCw,
-  MessageSquare, Briefcase, Plus, Trash2, Edit2, Check, X, ShieldAlert, Sparkles
+  MessageSquare, Briefcase, Plus, Trash2, Edit2, Check, X, ShieldAlert, Sparkles,
+  Calendar, ArrowUpRight, TrendingUp
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -28,6 +29,15 @@ export default function AdminDashboard() {
 
   // Lead Filter State
   const [leadFilter, setLeadFilter] = useState<string>("all");
+
+  // Selected Lead Drawer State
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [leadNotesInput, setLeadNotesInput] = useState("");
+  const [leadStatusInput, setLeadStatusInput] = useState("");
+  const [leadReminderInput, setLeadReminderInput] = useState("");
+  const [selectedLeadTimeline, setSelectedLeadTimeline] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [crmSaving, setCrmSaving] = useState(false);
 
   // Dynamic Forms State
   const [formConfigs, setFormConfigs] = useState<any[]>([]);
@@ -148,6 +158,67 @@ export default function AdminDashboard() {
     router.refresh();
   };
 
+  const handleSelectLead = async (lead: any) => {
+    setSelectedLead(lead);
+    setLeadNotesInput(lead.notes || "");
+    setLeadStatusInput(lead.status || "new");
+    setLeadReminderInput(lead.reminderDate || "");
+    setSelectedLeadTimeline([]);
+    
+    if (lead.sessionToken) {
+      setTimelineLoading(true);
+      try {
+        const res = await fetch(`/api/admin/leads/timeline?sessionToken=${lead.sessionToken}`);
+        const result = await res.json();
+        if (result.success && result.timeline) {
+          setSelectedLeadTimeline(result.timeline);
+        }
+      } catch (err) {
+        console.error("Error loading timeline:", err);
+      } finally {
+        setTimelineLoading(false);
+      }
+    }
+  };
+
+  const handleSaveLeadCRM = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    setCrmSaving(true);
+    try {
+      const res = await fetch("/api/admin/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          status: leadStatusInput,
+          notes: leadNotesInput,
+          reminderDate: leadReminderInput || null
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setLeads(prev => prev.map(l => l.id === selectedLead.id ? { 
+          ...l, 
+          status: leadStatusInput, 
+          notes: leadNotesInput, 
+          reminderDate: leadReminderInput || null 
+        } : l));
+        // Update the active selected lead object as well
+        setSelectedLead((prev: any) => ({
+          ...prev,
+          status: leadStatusInput,
+          notes: leadNotesInput,
+          reminderDate: leadReminderInput || null
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCrmSaving(false);
+    }
+  };
+
   const handleUpdateLeadStatus = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "new" ? "contacted" : currentStatus === "contacted" ? "archived" : "new";
     try {
@@ -158,6 +229,10 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         setLeads(prev => prev.map(l => l.id === id ? { ...l, status: nextStatus } : l));
+        if (selectedLead && selectedLead.id === id) {
+          setSelectedLead((prev: any) => ({ ...prev, status: nextStatus }));
+          setLeadStatusInput(nextStatus);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -826,6 +901,103 @@ export default function AdminDashboard() {
 
             </div>
 
+            {/* Conversion Funnel & Marketing UTM Campaigns Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Conversion Funnel */}
+              <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-4">
+                <div>
+                  <h3 className="font-serif text-base font-bold">Tunnel de Conversion</h3>
+                  <p className="text-[11px] text-gray-400">Suivi des visites, ouvertures de formulaire et soumissions</p>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  {(() => {
+                    const funnel = data?.conversionFunnel || { visitors: 0, openedModal: 0, submitted: 0, openRate: 0, submitRate: 0, overallConversionRate: 0 };
+                    return (
+                      <>
+                        {/* Step 1 */}
+                        <div className="relative p-3 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Étape 1 : Visiteurs Uniques</p>
+                            <p className="text-lg font-serif font-black text-white mt-0.5">{funnel.visitors.toLocaleString()} <span className="text-[10px] text-gray-400 font-sans font-normal">sessions</span></p>
+                          </div>
+                          <span className="text-xs font-bold text-gray-400 font-mono">100%</span>
+                        </div>
+
+                        {/* Transition arrow 1 */}
+                        <div className="flex justify-center -my-2.5">
+                          <div className="px-2.5 py-0.5 rounded-md bg-primary-green/10 text-primary-green text-[9px] font-bold border border-primary-green/20">
+                            Taux d'ouverture formulaire: {funnel.openRate}%
+                          </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="relative p-3 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Étape 2 : Intérêt (Formulaire Ouvert)</p>
+                            <p className="text-lg font-serif font-black text-accent-yellow mt-0.5">{funnel.openedModal.toLocaleString()} <span className="text-[10px] text-gray-400 font-sans font-normal">prospects</span></p>
+                          </div>
+                          <span className="text-xs font-bold text-accent-yellow font-mono">{funnel.openRate}%</span>
+                        </div>
+
+                        {/* Transition arrow 2 */}
+                        <div className="flex justify-center -my-2.5">
+                          <div className="px-2.5 py-0.5 rounded-md bg-primary-green/10 text-primary-green text-[9px] font-bold border border-primary-green/20">
+                            Taux d'envoi lead: {funnel.submitRate}%
+                          </div>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="relative p-3 bg-primary-green/10 border border-primary-green/20 rounded-2xl flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] text-primary-green font-bold uppercase tracking-wider">Étape 3 : Conversion (Lead Soumis)</p>
+                            <p className="text-lg font-serif font-black text-primary-green mt-0.5">{funnel.submitted.toLocaleString()} <span className="text-[10px] text-gray-300 font-sans font-normal">leads</span></p>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-xs font-bold text-primary-green font-mono">{funnel.overallConversionRate}%</span>
+                            <span className="text-[8px] text-gray-400">Du total</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Marketing Campaigns (UTM) */}
+              <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
+                <h3 className="font-serif text-base font-bold mb-4">Campagnes de Marketing (Paramètres UTM)</h3>
+                <div className="overflow-y-auto max-h-72 pr-1">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-primary-green/20 text-gray-400 font-bold uppercase tracking-wider">
+                        <th className="pb-2">Source (utm_source)</th>
+                        <th className="pb-2 text-right">Clics</th>
+                        <th className="pb-2 text-right">Leads</th>
+                        <th className="pb-2 text-right">Conv.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {data?.marketingCampaigns && data.marketingCampaigns.length > 0 ? (
+                        data.marketingCampaigns.map((camp: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-white/[0.01]">
+                            <td className="py-2.5 font-semibold text-gray-300 font-mono truncate max-w-[150px]">{camp.source}</td>
+                            <td className="py-2.5 text-right font-mono">{camp.sessions.toLocaleString()}</td>
+                            <td className="py-2.5 text-right font-mono">{camp.leads.toLocaleString()}</td>
+                            <td className="py-2.5 text-right font-mono text-primary-green font-bold">{camp.conversionRate}%</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-gray-500">Aucun paramètre UTM enregistré. Essayez d'ajouter ?utm_source=whatsapp dans l'URL.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
             {/* Demographics & Locations Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
@@ -959,21 +1131,17 @@ export default function AdminDashboard() {
                     </tr>
                   ) : (
                     filteredLeads.map(lead => (
-                      <tr key={lead.id} className="hover:bg-white/[0.02] transition-colors">
+                      <tr 
+                        key={lead.id} 
+                        onClick={() => handleSelectLead(lead)}
+                        className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                      >
                         <td className="py-3 px-4 text-gray-400 font-mono whitespace-nowrap">
                           {new Date(lead.date).toLocaleDateString("fr-FR")}
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-bold text-white text-sm">{lead.name}</p>
-                          <a 
-                            href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="text-primary-green hover:underline inline-flex items-center gap-1 mt-0.5"
-                          >
-                            <Phone className="w-3 h-3" />
-                            {lead.phone}
-                          </a>
+                          <p className="font-bold text-white text-sm group-hover:text-primary-green transition-colors">{lead.name}</p>
+                          <span className="text-gray-400 text-[10px] block mt-0.5">{lead.phone}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
@@ -998,30 +1166,31 @@ export default function AdminDashboard() {
                                 <span className="font-semibold text-gray-300">{(k as string)}:</span> {(v as string)}
                               </p>
                             ))}
+                            {lead.utmSource && (
+                              <p className="text-[9px] text-primary-green/80 font-mono">
+                                <span>UTM:</span> {lead.utmSource} {lead.utmMedium ? `(${lead.utmMedium})` : ""}
+                              </p>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleUpdateLeadStatus(lead.id, lead.status)}
-                            className={`px-2 py-1 rounded-lg font-bold text-[10px] capitalize transition-all cursor-pointer ${
-                              lead.status === "new" ? "bg-red-950/40 text-red-400 border border-red-900/30" :
-                              lead.status === "contacted" ? "bg-yellow-950/40 text-yellow-400 border border-yellow-900/30" :
-                              "bg-gray-800/40 text-gray-400 border border-gray-700/30"
-                            }`}
-                          >
-                            {lead.status === "new" ? "Nouveau" : lead.status === "contacted" ? "Contacté" : "Archivé"}
-                          </button>
+                          <span className={`px-2 py-1 rounded-lg font-bold text-[10px] capitalize border ${
+                            lead.status === "new" ? "bg-red-950/40 text-red-400 border-red-900/30" :
+                            lead.status === "contacted" ? "bg-yellow-950/40 text-yellow-400 border-yellow-900/30" :
+                            lead.status === "won" ? "bg-green-950/40 text-green-400 border-green-900/30" :
+                            "bg-gray-800/40 text-gray-400 border border-gray-700/30"
+                          }`}>
+                            {lead.status === "new" ? "Nouveau" : lead.status === "contacted" ? "Contacté" : lead.status === "won" ? "Converti" : "Archivé"}
+                          </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <a
-                            href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}?text=Bonjour%20${encodeURIComponent(lead.name.split(" ")[0])},%20c'est%20Victoire%20de%20Win%20Agro...`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3 py-1.5 rounded-full bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-black inline-flex items-center gap-1 transition-all"
+                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleSelectLead(lead)}
+                            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all"
                           >
-                            Contacter
+                            Suivre &amp; Relancer
                             <ChevronRight className="w-3.5 h-3.5" />
-                          </a>
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -1998,6 +2167,206 @@ export default function AdminDashboard() {
           </p>
         </footer>
       </main>
+
+      {/* Selected Lead CRM Detail Drawer Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-end">
+          <div className="w-full max-w-lg bg-[#0F2214] border-l border-primary-green/20 h-full overflow-y-auto p-6 shadow-2xl flex flex-col justify-between text-xs space-y-4">
+            
+            {/* Drawer Header */}
+            <div>
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary-green/10 text-primary-green flex items-center justify-center font-bold font-serif text-sm uppercase">
+                    {selectedLead.name.substring(0, 2)}
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-sm font-bold text-white leading-tight">{selectedLead.name}</h3>
+                    <p className="text-[10px] text-gray-400 font-mono">{selectedLead.phone}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedLead(null)}
+                  className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* CRM Lead Metadata */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-0.5">
+                  <span className="text-gray-500 font-semibold uppercase tracking-wider text-[8.5px]">Intérêt principal</span>
+                  <p className="text-white font-serif font-bold text-[11px]">{selectedLead.type}</p>
+                </div>
+                <div className="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-0.5">
+                  <span className="text-gray-500 font-semibold uppercase tracking-wider text-[8.5px]">Localisation</span>
+                  <p className="text-white font-bold text-[11px] inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                    {selectedLead.location}
+                  </p>
+                </div>
+              </div>
+
+              {/* Form custom fields details */}
+              <div className="mt-4 bg-black/20 p-3.5 rounded-2xl border border-white/5 space-y-2">
+                <p className="text-gray-300 font-bold uppercase tracking-wider text-[9px] border-b border-white/5 pb-1">Champs spécifiques du prospect</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(selectedLead.details || {}).map(([key, val]) => (
+                    <div key={key} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-medium">{key} :</span>
+                      <span className="text-white font-semibold text-right max-w-[200px] truncate" title={String(val)}>{String(val)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(selectedLead.details || {}).length === 0 && (
+                    <span className="text-gray-500 italic">Aucun détail supplémentaire.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* UTM tracking campaign */}
+              {(selectedLead.utmSource || selectedLead.utmMedium || selectedLead.utmCampaign) && (
+                <div className="mt-4 bg-primary-green/5 border border-primary-green/10 p-3 rounded-xl space-y-1">
+                  <p className="text-primary-green font-bold uppercase tracking-wider text-[9px] inline-flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" /> Source d'acquisition marketing
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-gray-300 pt-1">
+                    <div>
+                      <span className="text-gray-500 block text-[8px] uppercase">utm_source</span>
+                      <span className="text-white font-bold">{selectedLead.utmSource || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-[8px] uppercase">utm_medium</span>
+                      <span className="text-white font-bold">{selectedLead.utmMedium || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-[8px] uppercase">utm_campaign</span>
+                      <span className="text-white font-bold">{selectedLead.utmCampaign || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive CRM Form Settings */}
+              <form onSubmit={handleSaveLeadCRM} className="space-y-3.5 mt-4 pt-2 border-t border-white/5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-gray-400 font-semibold">Statut du pipeline</label>
+                    <select
+                      value={leadStatusInput}
+                      onChange={(e) => setLeadStatusInput(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#0F2214] border border-white/10 rounded-xl text-white font-bold focus:outline-none focus:ring-1 focus:ring-primary-green"
+                    >
+                      <option value="new">Nouveau (Non contacté)</option>
+                      <option value="contacted">En discussion (Contacté)</option>
+                      <option value="won">Converti (Client gagné ✓)</option>
+                      <option value="archived">Archivé (Perdu / Fermé)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-gray-400 font-semibold inline-flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-primary-green" /> Rappel relance
+                    </label>
+                    <input
+                      type="date"
+                      value={leadReminderInput}
+                      onChange={(e) => setLeadReminderInput(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-gray-400 font-semibold">Notes d'accompagnement & commentaires</label>
+                  <textarea
+                    rows={4}
+                    value={leadNotesInput}
+                    onChange={(e) => setLeadNotesInput(e.target.value)}
+                    placeholder="Saisissez des notes sur le profil, le budget du projet, les dates de formation ou de livraison..."
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans leading-relaxed"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={crmSaving}
+                  className="w-full py-2.5 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-black text-center shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {crmSaving ? "Enregistrement CRM..." : "Enregistrer les modifications"}
+                </button>
+              </form>
+
+              {/* Visitor session timeline navigation history */}
+              <div className="mt-5 pt-4 border-t border-white/5 space-y-3">
+                <p className="text-gray-300 font-bold uppercase tracking-wider text-[9px]">Historique de navigation (Visitor Path)</p>
+                <div className="bg-black/30 border border-white/5 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-3">
+                  {timelineLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2 text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary-green" /> Chargement du parcours...
+                    </div>
+                  ) : selectedLeadTimeline && selectedLeadTimeline.length > 0 ? (
+                    <div className="relative border-l border-primary-green/20 ml-2 pl-4 space-y-4 text-[10px]">
+                      {selectedLeadTimeline.map((item: any, idx: number) => {
+                        const isVirtual = item.path.startsWith("/modal/");
+                        return (
+                          <div key={idx} className="relative group">
+                            {/* Dot indicator */}
+                            <span className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full border border-[#0F2214] ${
+                              isVirtual ? "bg-accent-yellow scale-110" : "bg-primary-green"
+                            }`} />
+                            <div className="flex justify-between items-start gap-2">
+                              <span className={`font-mono ${isVirtual ? "text-accent-yellow font-bold" : "text-gray-300"}`}>
+                                {item.path}
+                              </span>
+                              <span className="text-gray-500 font-mono shrink-0">
+                                {new Date(item.timestamp).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              </span>
+                            </div>
+                            {item.utmSource && (
+                              <p className="text-[8px] text-primary-green/60 font-mono mt-0.5">Campaign hit: {item.utmSource}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 italic">Aucun historique de navigation trouvé pour ce lead (Session anonyme ou antérieure).</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Smart WhatsApp relances button */}
+            <div className="pt-4 border-t border-white/5 bg-[#0F2214] sticky bottom-0 z-10">
+              {(() => {
+                // Draft template message for WhatsApp
+                const nameParsed = selectedLead.name.split(" ")[0];
+                const cleanPhone = selectedLead.phone.replace(/[^0-9]/g, "");
+                const waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro ! 🌱
+
+J'ai bien reçu votre demande d'accompagnement pour : "${selectedLead.type}".
+
+Je suis disponible pour en discuter plus en détail avec vous. Avez-vous un moment de libre aujourd'hui ?`;
+                return (
+                  <a
+                    href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-3.5 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-2 border border-white/10 hover:border-primary-green shadow-xl transition-all text-sm"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
+                    </svg>
+                    Relancer le prospect sur WhatsApp
+                    <ArrowUpRight className="w-4 h-4" />
+                  </a>
+                );
+              })()}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Custom Confirmation Modal */}
       {confirmModal.isOpen && (

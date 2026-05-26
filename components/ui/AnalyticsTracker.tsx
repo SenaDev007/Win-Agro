@@ -7,7 +7,7 @@ export default function AnalyticsTracker() {
   const pathname = usePathname();
   const sessionTokenRef = useRef<string | null>(null);
 
-  // Initialize session token once on client-side
+  // Initialize session token & UTM parameters once on client-side
   useEffect(() => {
     if (typeof window !== "undefined") {
       let token = sessionStorage.getItem("win_agro_session");
@@ -16,6 +16,16 @@ export default function AnalyticsTracker() {
         sessionStorage.setItem("win_agro_session", token);
       }
       sessionTokenRef.current = token;
+
+      // Parse and cache UTM parameters
+      const searchParams = new URLSearchParams(window.location.search);
+      const utmSource = searchParams.get("utm_source");
+      const utmMedium = searchParams.get("utm_medium");
+      const utmCampaign = searchParams.get("utm_campaign");
+
+      if (utmSource) sessionStorage.setItem("win_agro_utm_source", utmSource);
+      if (utmMedium) sessionStorage.setItem("win_agro_utm_medium", utmMedium);
+      if (utmCampaign) sessionStorage.setItem("win_agro_utm_campaign", utmCampaign);
     }
   }, []);
 
@@ -28,13 +38,20 @@ export default function AnalyticsTracker() {
       const token = sessionTokenRef.current || sessionStorage.getItem("win_agro_session");
       if (!token) return;
 
+      const utmSource = sessionStorage.getItem("win_agro_utm_source");
+      const utmMedium = sessionStorage.getItem("win_agro_utm_medium");
+      const utmCampaign = sessionStorage.getItem("win_agro_utm_campaign");
+
       fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           path: pathname,
           referrer: document.referrer || null,
-          sessionToken: token
+          sessionToken: token,
+          utmSource: utmSource || null,
+          utmMedium: utmMedium || null,
+          utmCampaign: utmCampaign || null
         })
       }).catch(err => console.warn("Failed to send track telemetry:", err));
     };
@@ -54,13 +71,20 @@ export default function AnalyticsTracker() {
       const token = sessionTokenRef.current || sessionStorage.getItem("win_agro_session");
       if (!token || !pathname) return;
 
+      const utmSource = sessionStorage.getItem("win_agro_utm_source");
+      const utmMedium = sessionStorage.getItem("win_agro_utm_medium");
+      const utmCampaign = sessionStorage.getItem("win_agro_utm_campaign");
+
       fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           path: pathname,
           referrer: null,
-          sessionToken: token
+          sessionToken: token,
+          utmSource: utmSource || null,
+          utmMedium: utmMedium || null,
+          utmCampaign: utmCampaign || null
         })
       }).catch(err => console.warn("Failed to send keep-alive telemetry:", err));
     };

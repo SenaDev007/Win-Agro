@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { localStore } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -26,18 +27,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const { id, status } = await request.json();
-    if (!id || !status) {
-      return NextResponse.json({ success: false, error: "Champs manquants" }, { status: 400 });
+    const { id, status, notes, reminderDate } = await request.json();
+    if (!id) {
+      return NextResponse.json({ success: false, error: "ID requis" }, { status: 400 });
     }
 
-    const updated = await localStore.updateLeadStatus(id, status);
-    if (updated) {
+    // Prepare update payload
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (reminderDate !== undefined) updateData.reminderDate = reminderDate || null;
+
+    const lead = await prisma.lead.update({
+      where: { id },
+      data: updateData
+    });
+
+    if (lead) {
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ success: false, error: "Lead non trouvé" }, { status: 404 });
     }
   } catch (error: any) {
+    console.error("❌ Error updating lead CRM details:", error);
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
   }
 }

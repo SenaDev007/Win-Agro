@@ -75,14 +75,20 @@ model FormConfig {
 }
 
 model Lead {
-  id       String @id
-  date     String
-  name     String
-  phone    String
-  type     String
-  location String
-  details  Json
-  status   String @default("new")
+  id           String  @id
+  date         String
+  name         String
+  phone        String
+  type         String
+  location     String
+  details      Json
+  status       String  @default("new")
+  notes        String? @default("")
+  reminderDate String? @map("reminder_date")
+  sessionToken String? @map("session_token")
+  utmSource    String? @map("utm_source")
+  utmMedium    String? @map("utm_medium")
+  utmCampaign  String? @map("utm_campaign")
 
   @@map("leads")
 }
@@ -98,18 +104,24 @@ model PageView {
   browser      String?
   country      String?
   city         String?
+  utmSource    String?  @map("utm_source")
+  utmMedium    String?  @map("utm_medium")
+  utmCampaign  String?  @map("utm_campaign")
 
   @@map("page_views")
 }
 
 model ActiveSession {
-  token      String   @id // sessionToken
-  lastSeen   DateTime @default(now()) @map("last_seen")
-  createdAt  DateTime @default(now()) @map("created_at")
-  deviceType String?  @map("device_type")
-  browser    String?
-  country    String?
-  city       String?
+  token       String   @id // sessionToken
+  lastSeen    DateTime @default(now()) @map("last_seen")
+  createdAt   DateTime @default(now()) @map("created_at")
+  deviceType  String?  @map("device_type")
+  browser     String?
+  country     String?
+  city        String?
+  utmSource   String?  @map("utm_source")
+  utmMedium   String?  @map("utm_medium")
+  utmCampaign String?  @map("utm_campaign")
 
   @@map("active_sessions")
 }

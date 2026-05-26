@@ -57,7 +57,11 @@ export async function POST(request: Request) {
         phone: cleanWhatsapp,
         type: typeLabel,
         location: cleanVille,
-        details: detailsObj
+        details: detailsObj,
+        sessionToken: body.sessionToken || null,
+        utmSource: body.utmSource || null,
+        utmMedium: body.utmMedium || null,
+        utmCampaign: body.utmCampaign || null
       });
 
       // Construct dynamic message copy

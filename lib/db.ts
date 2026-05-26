@@ -9,7 +9,13 @@ export interface LeadRecord {
   type: string;
   location: string;
   details: Record<string, string>;
-  status: "new" | "contacted" | "archived";
+  status: string;
+  notes?: string | null;
+  reminderDate?: string | null;
+  sessionToken?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
 }
 
 export interface CatalogProduct {
@@ -227,7 +233,13 @@ class LocalStore {
       type: l.type,
       location: l.location,
       details: l.details as Record<string, string>,
-      status: l.status as LeadRecord["status"]
+      status: l.status,
+      notes: l.notes,
+      reminderDate: l.reminderDate,
+      sessionToken: l.sessionToken,
+      utmSource: l.utmSource,
+      utmMedium: l.utmMedium,
+      utmCampaign: l.utmCampaign
     }));
   }
 
@@ -245,7 +257,13 @@ class LocalStore {
         type: lead.type,
         location: lead.location,
         details: lead.details as any,
-        status
+        status,
+        notes: lead.notes || "",
+        reminderDate: lead.reminderDate || null,
+        sessionToken: lead.sessionToken || null,
+        utmSource: lead.utmSource || null,
+        utmMedium: lead.utmMedium || null,
+        utmCampaign: lead.utmCampaign || null
       }
     });
 
