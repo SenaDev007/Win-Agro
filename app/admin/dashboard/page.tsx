@@ -51,6 +51,28 @@ function playReminderAlarm() {
   } catch {/* ignore */}
 }
 
+// ─── Smart email resolver: checks lead.email + lead.details JSON ─────────────
+function resolveLeadEmail(lead: any): string {
+  // 1. Top-level email field (most reliable)
+  if (lead.email && lead.email.trim() && lead.email.trim() !== "") {
+    return lead.email.trim();
+  }
+  // 2. Dig into details JSON (form fields may store email under various keys)
+  if (lead.details) {
+    let details = lead.details;
+    if (typeof details === "string") {
+      try { details = JSON.parse(details); } catch { details = {}; }
+    }
+    const emailKeys = ["E-mail", "email", "Email", "e-mail", "Mail", "Adresse email", "Adresse e-mail"];
+    for (const key of emailKeys) {
+      if (details[key] && typeof details[key] === "string" && details[key].includes("@")) {
+        return details[key].trim();
+      }
+    }
+  }
+  return "";
+}
+
 function formatWhatsAppNumber(phone: string): string {
   let cleaned = phone.replace(/[^0-9]/g, "");
   if (!cleaned) return "";
@@ -280,7 +302,7 @@ export default function AdminDashboard() {
     setLeadNotesInput(lead.notes || "");
     setLeadStatusInput(lead.status || "new");
     setLeadReminderInput(lead.reminderDate || "");
-    setLeadEmailInput(lead.email || "");
+    setLeadEmailInput(resolveLeadEmail(lead));
     setSelectedLeadTimeline([]);
     
     if (lead.sessionToken) {
@@ -1594,21 +1616,26 @@ export default function AdminDashboard() {
                             >
                               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" /></svg>
                             </a>
-                            {/* Quick Email */}
-                            <button
-                              title={lead.email ? "Relancer par email" : "Email non renseigné"}
-                              disabled={!lead.email}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!lead.email) return;
-                                const subj = encodeURIComponent(`🌱 Suite à votre demande — Win Agro`);
-                                const body = encodeURIComponent(`Bonjour ${lead.name},\n\nJe reviens vers vous suite à votre demande concernant nos services Win Agro.\n\nNous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
-                                window.open(`mailto:${lead.email}?subject=${subj}&body=${body}`, "_blank");
-                              }}
-                              className={`p-1.5 rounded-lg transition-all ${lead.email ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Quick Email — auto-resolve from lead.email or details */}
+                            {(() => {
+                              const resolvedEmail = resolveLeadEmail(lead);
+                              const subj = encodeURIComponent(`🌱 Suite à votre demande — Win Agro`);
+                              const body = encodeURIComponent(`Bonjour ${lead.name},\n\nJe reviens vers vous suite à votre demande concernant nos services Win Agro.\n\nNous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                              return (
+                                <button
+                                  title={resolvedEmail ? `Relancer par email — ${resolvedEmail}` : "Email non renseigné par le client"}
+                                  disabled={!resolvedEmail}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!resolvedEmail) return;
+                                    window.open(`mailto:${resolvedEmail}?subject=${subj}&body=${body}`, "_blank");
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-all ${resolvedEmail ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            })()}
                             {/* CRM drawer */}
                             <button
                               onClick={() => handleSelectLead(lead)}
@@ -1840,21 +1867,26 @@ export default function AdminDashboard() {
                               >
                                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" /></svg>
                               </a>
-                              {/* Quick Email */}
-                              <button
-                                title={lead.email ? "Relancer par email" : "Email non renseigné"}
-                                disabled={!lead.email}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!lead.email) return;
-                                  const subj = encodeURIComponent(`🌱 Votre commande Win Agro — Confirmation de disponibilité`);
-                                  const body = encodeURIComponent(`Bonjour ${lead.name},\n\nNous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.\n\nAfin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
-                                  window.open(`mailto:${lead.email}?subject=${subj}&body=${body}`, "_blank");
-                                }}
-                                className={`p-1.5 rounded-lg transition-all ${lead.email ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
-                              >
-                                <Mail className="w-3.5 h-3.5" />
-                              </button>
+                              {/* Quick Email — auto-resolve from lead.email or details */}
+                              {(() => {
+                                const resolvedEmail = resolveLeadEmail(lead);
+                                const subj = encodeURIComponent(`🌱 Votre commande Win Agro — Confirmation de disponibilité`);
+                                const body = encodeURIComponent(`Bonjour ${lead.name},\n\nNous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.\n\nAfin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                                return (
+                                  <button
+                                    title={resolvedEmail ? `Confirmer dispo par email — ${resolvedEmail}` : "Email non renseigné par le client"}
+                                    disabled={!resolvedEmail}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!resolvedEmail) return;
+                                      window.open(`mailto:${resolvedEmail}?subject=${subj}&body=${body}`, "_blank");
+                                    }}
+                                    className={`p-1.5 rounded-lg transition-all ${resolvedEmail ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </button>
+                                );
+                              })()}
                               {/* CRM drawer */}
                               <button
                                 onClick={() => handleSelectLead(lead)}
@@ -3210,15 +3242,17 @@ Win Agro Agri Tech Solutions`;
                             Confirm Dispo (WA)
                           </a>
                           <button
+                            disabled={!leadEmail.trim()}
                             onClick={() => {
-                              if (!leadEmail.trim()) {
-                                alert("Voulez-vous saisir une adresse e-mail dans le formulaire d'abord ?");
-                                return;
-                              }
                               handleConfirmAvailability();
                               window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailConfirmSubject)}&body=${encodeURIComponent(mailConfirmBody)}`, "_blank");
                             }}
-                            className="flex-1 py-2.5 px-2 rounded-xl bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-green-800/40 hover:border-primary-green shadow-xl transition-all text-xs cursor-pointer"
+                            title={!leadEmail.trim() ? "Email non renseigné par le client" : `Envoyer à ${leadEmail}`}
+                            className={`flex-1 py-2.5 px-2 rounded-xl font-black inline-flex items-center justify-center gap-1.5 border shadow-xl transition-all text-xs ${
+                              leadEmail.trim()
+                                ? "bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] border-green-800/40 hover:border-primary-green cursor-pointer"
+                                : "bg-white/5 text-gray-600 border-white/5 cursor-not-allowed opacity-40"
+                            }`}
                           >
                             <Mail className="w-3.5 h-3.5 shrink-0" />
                             Confirm Dispo (Email)
@@ -3240,17 +3274,19 @@ Win Agro Agri Tech Solutions`;
                         Relancer WhatsApp
                       </a>
                       <button
+                        disabled={!leadEmail.trim()}
                         onClick={() => {
-                          if (!leadEmail.trim()) {
-                            alert("Voulez-vous saisir une adresse e-mail dans le formulaire d'abord ?");
-                            return;
-                          }
                           window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`, "_blank");
                         }}
-                        className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs cursor-pointer"
+                        title={!leadEmail.trim() ? "Email non renseigné par le client" : `Relancer ${leadEmail}`}
+                        className={`flex-1 py-3 px-2 rounded-xl font-black inline-flex items-center justify-center gap-1.5 border shadow-xl transition-all text-xs ${
+                          leadEmail.trim()
+                            ? "bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] border-white/10 hover:border-primary-green cursor-pointer"
+                            : "bg-white/5 text-gray-600 border-white/5 cursor-not-allowed opacity-40"
+                        }`}
                       >
                         <Mail className="w-4 h-4 shrink-0" />
-                        Relancer par Email
+                        {leadEmail.trim() ? `Relancer — ${leadEmail}` : "Relancer par Email"}
                       </button>
                     </div>
                   </div>
