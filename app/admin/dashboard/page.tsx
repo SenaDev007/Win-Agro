@@ -7,7 +7,7 @@ import {
   Tag, Loader2, LogOut, CheckCircle2, ChevronRight, Eye, RefreshCw,
   MessageSquare, Briefcase, Plus, Trash2, Edit2, Check, X, ShieldAlert, Sparkles,
   Calendar, ArrowUpRight, TrendingUp, Search, Bell, BellRing, Send, Filter,
-  SlidersHorizontal, XCircle
+  SlidersHorizontal, XCircle, Mail
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -2608,30 +2608,124 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Smart WhatsApp relances button */}
-            <div className="pt-4 border-t border-white/5 bg-[#0F2214] sticky bottom-0 z-10">
+            {/* Smart WhatsApp & Email relances buttons */}
+            <div className="pt-4 border-t border-white/5 bg-[#0F2214] sticky bottom-0 z-10 flex gap-2">
               {(() => {
-                // Draft template message for WhatsApp
                 const nameParsed = selectedLead.name.split(" ")[0];
                 const cleanPhone = selectedLead.phone.replace(/[^0-9]/g, "");
-                const waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro ! 🌱
+                const leadEmail = selectedLead.email || "";
+                const typeClean = selectedLead.type.toLowerCase();
 
-J'ai bien reçu votre demande d'accompagnement pour : "${selectedLead.type}".
+                let waMessage = "";
+                let mailSubject = "";
+                let mailBody = "";
 
-Je suis disponible pour en discuter plus en détail avec vous. Avez-vous un moment de libre aujourd'hui ?`;
+                if (typeClean.includes("projet") || typeClean.includes("accompagnement")) {
+                  // Accompagnement
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre demande pour votre projet d'élevage ("${selectedLead.type}"). C'est une excellente initiative pour valoriser votre terrain et sécuriser des revenus durables au Bénin. Êtes-vous disponible pour un bref appel de 10 minutes aujourd'hui ou demain afin d'évaluer la faisabilité technique de votre projet ?`;
+                  mailSubject = `🌱 Suite à votre projet d'élevage - Win Agro`;
+                  mailBody = `Bonjour ${selectedLead.name},
+
+J'ai pris connaissance avec beaucoup d'intérêt de votre projet d'accompagnement pour la création/optimisation de votre élevage. C'est une excellente décision d'investir dans ce secteur au Bénin, mais la réussite repose sur une planification technique rigoureuse dès les premiers jours.
+
+Afin de structurer au mieux notre collaboration (étude de faisabilité, infrastructures, approvisionnement), je vous propose un échange téléphonique de 10 à 15 minutes.
+
+Quelles seraient vos disponibilités cette semaine ?
+
+Bien cordialement,
+Victoire
+Win Agro Agri Tech Solutions`;
+                } else if (typeClean.includes("formation") || typeClean.includes("inscription")) {
+                  // Formation
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Merci pour votre intérêt pour notre formation pro ("${selectedLead.type}"). C'est le meilleur moyen d'éviter les erreurs de débutant qui coûtent cher. Nous allons ouvrir les prochaines sessions de formation pratique. Préférez-vous un accompagnement en présentiel ou en ligne pour démarrer ?`;
+                  mailSubject = `🎓 Votre inscription à la formation Win Agro`;
+                  mailBody = `Bonjour ${selectedLead.name},
+
+Merci pour l'intérêt que vous portez à nos formations professionnelles Win Agro.
+
+L'élevage est un métier de précision où l'improvisation coûte cher en pertes d'animaux. Notre objectif est de vous donner toutes les clés pratiques (provenderie, prophylaxie naturelle, gestion de bande) pour vous lancer en toute sécurité.
+
+Pour finaliser votre inscription et adapter le programme à vos disponibilités, je vous invite à me confirmer si vous préférez suivre cette formation en ligne ou en présentiel dans nos centres.
+
+Dans l'attente de votre retour, je reste à votre entière disposition.
+
+Chaleureusement,
+Victoire
+Win Agro Agri Tech Solutions`;
+                } else if (typeClean.includes("consultation") || typeClean.includes("diagnostic")) {
+                  // Consultation
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai vu votre alerte concernant vos difficultés d'élevage. Dans notre domaine, chaque jour de retard peut aggraver la situation (mortalité, baisse de ponte). Je souhaite faire un point d'urgence avec vous. Pouvez-vous m'appeler ou m'envoyer les détails de vos pertes actuelles par message ?`;
+                  mailSubject = `🚨 Point de situation urgent - Diagnostic Win Agro`;
+                  mailBody = `Bonjour ${selectedLead.name},
+
+J'ai bien reçu votre demande de diagnostic pour votre élevage. Face aux anomalies constatées (mortalité, ponte faible ou provende inefficace), la réactivité est cruciale pour stopper l'hémorragie financière.
+
+Afin d'établir un premier pré-diagnostic et d'organiser une intervention rapide (physique ou à distance), je vous invite à me recontacter par téléphone au plus vite, ou à me décrire précisément les symptômes observés sur votre cheptel.
+
+Restant à vos côtés pour redresser la barre de votre exploitation.
+
+Cordialement,
+Victoire
+Win Agro Agri Tech Solutions`;
+                } else if (typeClean.includes("catalogue") || typeClean.includes("commande")) {
+                  // Commande Catalogue
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre panier de commande dans notre catalogue. Je souhaite valider avec vous les quantités, les tarifs du jour et planifier la livraison de vos produits/sujets. Êtes-vous disponible pour confirmer cela ensemble ?`;
+                  mailSubject = `🛒 Validation de votre commande de catalogue - Win Agro`;
+                  mailBody = `Bonjour ${selectedLead.name},
+
+Nous vous remercions pour l'intérêt que vous portez à nos intrants et sujets d'élevage Win Agro.
+
+J'ai bien reçu le récapitulatif de votre commande de catalogue. Afin de vous garantir des sujets vigoureux et des aliments frais, nous devons valider ensemble les stocks disponibles pour votre date de livraison souhaitée.
+
+Je vous invite à me confirmer vos disponibilités pour un bref appel de validation, ou à répondre directement à ce mail.
+
+En vous remerciant pour votre confiance.
+
+Bien cordialement,
+Victoire
+Win Agro Agri Tech Solutions`;
+                } else {
+                  // Contact Standard
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre message de contact. Je suis à votre écoute pour vous conseiller et vous guider dans vos projets agricoles au Bénin. Comment puis-je vous aider aujourd'hui ?`;
+                  mailSubject = `🌱 Votre demande d'informations - Win Agro`;
+                  mailBody = `Bonjour ${selectedLead.name},
+
+J'ai bien reçu votre message de contact sur le site de Win Agro Agri Tech Solutions.
+
+Quel que soit votre projet ou votre problématique agricole, notre équipe se tient prête à vous accompagner pour vous assurer un démarrage sécurisé ou des performances optimisées.
+
+Pouvez-vous m'en dire plus sur vos attentes afin que je vous oriente vers la solution la plus adaptée ?
+
+Dans l'attente de vous lire, je vous souhaite une excellente journée.
+
+Bien cordialement,
+Victoire
+Win Agro Agri Tech Solutions`;
+                }
+
                 return (
-                  <a
-                    href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-3.5 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-2 border border-white/10 hover:border-primary-green shadow-xl transition-all text-sm"
-                  >
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
-                    </svg>
-                    Relancer le prospect sur WhatsApp
-                    <ArrowUpRight className="w-4 h-4" />
-                  </a>
+                  <>
+                    <a
+                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
+                    >
+                      <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
+                      </svg>
+                      Relancer WhatsApp
+                    </a>
+                    {leadEmail && (
+                      <a
+                        href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`}
+                        className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
+                      >
+                        <Mail className="w-4 h-4 shrink-0" />
+                        Relancer par Email
+                      </a>
+                    )}
+                  </>
                 );
               })()}
             </div>

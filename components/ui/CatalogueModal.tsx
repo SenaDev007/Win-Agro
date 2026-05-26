@@ -2,7 +2,27 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingCart, Plus, Minus, Send, Bird, Wheat, Trees, Trash2 } from "lucide-react";
+import { X, ShoppingCart, Plus, Minus, Send, Bird, Wheat, Trees, Trash2, ChevronLeft, Loader2 } from "lucide-react";
+
+/* ─── Local Components ───────────────────────────────────── */
+const Input = ({ label, name, value, onChange, type = "text", placeholder, required }: {
+  label: string; name: string; value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string; placeholder?: string; required?: boolean;
+}) => (
+  <div className="flex flex-col gap-1.5 font-sans">
+    <label className="text-xs font-bold text-primary-deep uppercase tracking-wider">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      required={required}
+      className="w-full px-3 py-2.5 rounded-xl border border-primary-green/20 bg-white text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-green/30 transition-all"
+    />
+  </div>
+);
 
 /* ─── Types ─────────────────────────────────────────────── */
 export interface CatalogueProduct {
@@ -145,6 +165,12 @@ interface CatalogueModalProps {
 export default function CatalogueModal({ isOpen, onClose, categoryKey }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [dynamicProducts, setDynamicProducts] = useState<any[]>([]);
+  const [step, setStep] = useState<"list" | "checkout">("list");
+  const [form, setForm] = useState<Record<string, string>>({
+    prenom: "", nom: "", whatsapp: "", email: "", ville: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Fetch updated catalog products from the admin store dynamically
   useEffect(() => {
@@ -182,10 +208,25 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
     };
   }, [rawCategory, dynamicProducts]);
 
-  // Reset cart when category changes
+  // Reset cart and step when category changes
   useEffect(() => {
     setCart({});
+    setStep("list");
+    setForm({ prenom: "", nom: "", whatsapp: "", email: "", ville: "" });
+    setError("");
   }, [categoryKey]);
+
+  // Reset when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => {
+        setStep("list");
+        setForm({ prenom: "", nom: "", whatsapp: "", email: "", ville: "" });
+        setCart({});
+        setError("");
+      }, 300);
+    }
+  }, [isOpen]);
 
   // Close on Escape
   useEffect(() => {
@@ -225,23 +266,93 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
 
   const handleSendOrder = () => {
     if (!category || cartItems.length === 0) return;
+    setStep("checkout");
+  };
 
-    const lines = cartItems.map(item =>
-      `- ${item.product.name} × ${item.qty} = ${(item.product.price! * item.qty).toLocaleString("fr-FR")} FCFA`
-    );
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
 
-    const message = `Bonjour Victoire,
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-Je souhaite passer une commande dans la catégorie *${category.title}* :
+    try {
+      if (!category || cartItems.length === 0) return;
 
+      const token = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_session") : null;
+      const utmSource = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_source") : null;
+      const utmMedium = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_medium") : null;
+      const utmCampaign = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_campaign") : null;
+
+      // Construct lead details object with the products ordered
+      const detailsObj: Record<string, string> = {
+        "Catégorie catalogue": category.title,
+        "Total estimé (FCFA)": `${totalPrice.toLocaleString("fr-FR")} FCFA`,
+      };
+
+      cartItems.forEach(item => {
+        detailsObj[`Commande: ${item.product.name}`] = `${item.qty} × ${item.product.price?.toLocaleString("fr-FR") || "Sur devis"} FCFA`;
+      });
+
+      // 1. Submit lead to database/API (notifies backoffice and email!)
+      const res = await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: `Commande Catalogue — ${category.title}`,
+          prenom: form.prenom,
+          nom: form.nom,
+          whatsapp: form.whatsapp,
+          email: form.email,
+          ville: form.ville,
+          sessionToken: token || undefined,
+          utmSource: utmSource || undefined,
+          utmMedium: utmMedium || undefined,
+          utmCampaign: utmCampaign || undefined,
+          ...cart // passes raw cart items for auto-save compatibility
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Erreur lors de l'enregistrement");
+      }
+
+      // 2. Format the WhatsApp message with user coordinates + cart items + polite closing message
+      const lines = cartItems.map(item =>
+        `- ${item.product.name} × ${item.qty} = ${(item.product.price! * item.qty).toLocaleString("fr-FR")} FCFA`
+      );
+
+      const message = `Bonjour Victoire,
+ 
+Je m'appelle ${form.prenom} ${form.nom}. Je souhaite passer une commande dans la catégorie *${category.title}* :
+ 
 ${lines.join("\n")}
-
+ 
 Total estimé : *${totalPrice.toLocaleString("fr-FR")} FCFA*
+ 
+Mes coordonnées :
+- Localisation : ${form.ville}
+- WhatsApp : ${form.whatsapp}
+- E-mail : ${form.email}
 
-Merci de confirmer les disponibilités et modalités de livraison. À bientôt !`;
+Merci de confirmer les disponibilités et modalités de livraison. Merci à vous, dans l'attente de votre réponse.`;
 
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+      const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+
+      // 3. Clear cart and close modal
+      setCart({});
+      setStep("list");
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || "Une erreur est survenue. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!category) return null;
@@ -301,39 +412,80 @@ Merci de confirmer les disponibilités et modalités de livraison. À bientôt !
                 </button>
               </div>
 
-              {/* Products Grid */}
-              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
-                <p className="text-xs text-gray-500 font-sans mb-4 text-center">
-                  ⚡ Les prix sont indicatifs. Victoire confirmera les tarifs finaux sur WhatsApp.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {category.products.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      qty={cart[product.id] ?? 0}
-                      onAdd={() => addToCart(product.id)}
-                      onRemove={() => removeFromCart(product.id)}
-                    />
-                  ))}
-                </div>
-
-                {/* Professional Win Agro signature and logo */}
-                <div className="pt-8 mt-6 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
-                  <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
-                  <p className="text-sm font-serif font-bold text-primary-deep font-sans">L'équipe Win Agro</p>
-                  <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
-                    Commandes sécurisées et gérées par notre équipe. Retrait sur place ou livraison disponible dans tout le Bénin.
+              {step === "checkout" ? (
+                /* Checkout Form Step */
+                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
+                  <button
+                    onClick={() => setStep("list")}
+                    className="flex items-center gap-1 text-primary-green hover:text-primary-deep text-xs font-sans font-bold mb-4 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Retour au catalogue
+                  </button>
+                  
+                  <h3 className="font-serif font-black text-primary-deep text-lg mb-1">Finalisez votre commande</h3>
+                  <p className="text-xs text-gray-500 font-sans mb-5">
+                    Entrez vos coordonnées. Votre commande sera enregistrée dans le suivi clients et ouverte directement sur WhatsApp.
                   </p>
+
+                  <form onSubmit={handleCheckoutSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input label="Prénom" name="prenom" value={form.prenom} onChange={handleChange} placeholder="Kokou" required />
+                      <Input label="Nom" name="nom" value={form.nom} onChange={handleChange} placeholder="Agbodjan" required />
+                    </div>
+                    <Input label="Numéro WhatsApp" name="whatsapp" value={form.whatsapp} onChange={handleChange} type="tel" placeholder="+229 01 XX XX XX XX" required />
+                    <Input label="Adresse e-mail" name="email" value={form.email} onChange={handleChange} type="email" placeholder="exemple@email.com" required />
+                    <Input label="Ville / Localisation" name="ville" value={form.ville} onChange={handleChange} placeholder="Cotonou, Parakou, Porto-Novo..." required />
+
+                    {error && <p className="text-red-500 text-xs font-sans bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-primary-green hover:bg-primary-green/90 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 cursor-pointer mt-4"
+                    >
+                      {loading ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement...</>
+                      ) : (
+                        <><Send className="w-4 h-4" /> Valider et Commander via WhatsApp</>
+                      )}
+                    </button>
+                  </form>
                 </div>
+              ) : (
+                /* Products Grid Step */
+                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
+                  <p className="text-xs text-gray-500 font-sans mb-4 text-center">
+                    ⚡ Les prix sont indicatifs. Victoire confirmera les tarifs finaux sur WhatsApp.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {category.products.map(product => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        qty={cart[product.id] ?? 0}
+                        onAdd={() => addToCart(product.id)}
+                        onRemove={() => removeFromCart(product.id)}
+                      />
+                    ))}
+                  </div>
 
-                {/* Bottom padding for cart bar */}
-                <div className="h-28" />
-              </div>
+                  {/* Professional Win Agro signature and logo */}
+                  <div className="pt-8 mt-6 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
+                    <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
+                    <p className="text-sm font-serif font-bold text-primary-deep font-sans">L'équipe Win Agro</p>
+                    <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
+                      Commandes sécurisées et gérées par notre équipe. Retrait sur place ou livraison disponible dans tout le Bénin.
+                    </p>
+                  </div>
 
-              {/* Floating Cart Bar */}
+                  {/* Bottom padding for cart bar */}
+                  <div className="h-28" />
+                </div>
+              )}
+
+              {/* Floating Cart Bar (only visible in list step) */}
               <AnimatePresence>
-                {totalItems > 0 ? (
+                {totalItems > 0 && step === "list" ? (
                   <motion.div
                     key="cart-bar"
                     initial={{ y: 80, opacity: 0 }}
@@ -363,7 +515,7 @@ Merci de confirmer les disponibilités et modalités de livraison. À bientôt !
                       Commander via WhatsApp
                     </button>
                   </motion.div>
-                ) : (
+                ) : step === "list" ? (
                   <motion.div
                     key="cart-empty"
                     initial={{ opacity: 0 }}
@@ -374,7 +526,7 @@ Merci de confirmer les disponibilités et modalités de livraison. À bientôt !
                       Ajoutez des articles au panier avec <Plus className="w-3 h-3 inline" /> pour composer votre commande
                     </p>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </motion.div>
