@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       let htmlDetails = "";
       let whatsappMessage = `Bonjour Victoire,
  
-Je m'appelle ${cleanPrenom} ${cleanNom}. Je souhaite vous contacter au sujet de : ${config.title}.
+Je m'appelle ${cleanPrenom} ${cleanNom}. Je souhaite vous contacter au sujet de : ${typeLabel}.
  
 Voici mes coordonnées :
 - Localisation : ${cleanVille}
@@ -163,7 +163,7 @@ Voici mes coordonnées :
 
       whatsappMessage += `\n\nMerci à vous, en attendant votre réponse.`;
 
-      const emailSubject = `🌱 ${config.title} — ${cleanPrenom} ${cleanNom}`;
+      const emailSubject = `🌱 ${typeLabel} — ${cleanPrenom} ${cleanNom}`;
 
       // Send email via Resend
       let emailSent = false;
