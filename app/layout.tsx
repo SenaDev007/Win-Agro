@@ -21,6 +21,10 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  // ── metadataBase : résout TOUS les chemins relatifs (OG, twitter, icons)
+  // Couvre à la fois winagrotech.com ET www.winagrotech.com
+  metadataBase: new URL("https://winagrotech.com"),
+
   title: "Élevage au Bénin — Formation, Installation, Vente | Win Agro Agri Tech",
   description: "Win Agro Agri Tech Solutions t'accompagne dans ton projet d'élevage au Bénin. Formation pratique, installation de ferme, vente de volailles et provendes. Victoire AHOGNON, experte terrain.",
   alternates: {
@@ -35,16 +39,32 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/Logo Win Agro.png",
-        width: 800,
-        height: 600,
-        alt: "Win Agro Logo",
+        // URL sans espace, absolue grâce à metadataBase
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Win Agro Agri Tech Solutions — Formation & Élevage au Bénin",
       },
     ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Win Agro Agri Tech — Formation & Élevage au Bénin",
+    description: "Formations pratiques, installation de ferme et vente d'animaux sélectionnés au Bénin.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/og-image.png",
+    shortcut: "/og-image.png",
+    apple: "/og-image.png",
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 
