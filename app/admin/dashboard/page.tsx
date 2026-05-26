@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [leadNotesInput, setLeadNotesInput] = useState("");
   const [leadStatusInput, setLeadStatusInput] = useState("");
   const [leadReminderInput, setLeadReminderInput] = useState("");
+  const [leadEmailInput, setLeadEmailInput] = useState("");
   const [selectedLeadTimeline, setSelectedLeadTimeline] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [crmSaving, setCrmSaving] = useState(false);
@@ -170,6 +171,7 @@ export default function AdminDashboard() {
     setLeadNotesInput(lead.notes || "");
     setLeadStatusInput(lead.status || "new");
     setLeadReminderInput(lead.reminderDate || "");
+    setLeadEmailInput(lead.email || "");
     setSelectedLeadTimeline([]);
     
     if (lead.sessionToken) {
@@ -246,7 +248,8 @@ export default function AdminDashboard() {
           id: selectedLead.id,
           status: leadStatusInput,
           notes: leadNotesInput,
-          reminderDate: leadReminderInput || null
+          reminderDate: leadReminderInput || null,
+          email: leadEmailInput
         })
       });
       const result = await res.json();
@@ -255,14 +258,16 @@ export default function AdminDashboard() {
           ...l, 
           status: leadStatusInput, 
           notes: leadNotesInput, 
-          reminderDate: leadReminderInput || null 
+          reminderDate: leadReminderInput || null,
+          email: leadEmailInput
         } : l));
         // Update the active selected lead object as well
         setSelectedLead((prev: any) => ({
           ...prev,
           status: leadStatusInput,
           notes: leadNotesInput,
-          reminderDate: leadReminderInput || null
+          reminderDate: leadReminderInput || null,
+          email: leadEmailInput
         }));
       }
     } catch (err) {
@@ -2430,7 +2435,7 @@ export default function AdminDashboard() {
                     <TrendingUp className="w-3 h-3" /> Source d'acquisition marketing
                   </p>
                   <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-gray-300 pt-1">
-                    <div>
+<div>
                       <span className="text-gray-500 block text-[8px] uppercase">utm_source</span>
                       <span className="text-white font-bold">{selectedLead.utmSource || "N/A"}</span>
                     </div>
@@ -2448,6 +2453,18 @@ export default function AdminDashboard() {
 
               {/* ── Interactive CRM Form Settings ── */}
               <div className="space-y-3.5 mt-4 pt-2 border-t border-white/5">
+
+                {/* Email Edit Input */}
+                <div className="space-y-1">
+                  <label className="text-gray-400 font-semibold text-[10px] uppercase tracking-wider block">Adresse E-mail du Prospect</label>
+                  <input
+                    type="email"
+                    value={leadEmailInput}
+                    onChange={(e) => setLeadEmailInput(e.target.value)}
+                    placeholder="prospect@email.com (non spécifié)"
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green text-xs font-mono"
+                  />
+                </div>
 
                 {/* Pipeline status + Rappel date */}
                 <div className="grid grid-cols-2 gap-3">

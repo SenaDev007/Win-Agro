@@ -125,7 +125,8 @@ Je m'appelle ${cleanPrenom} ${cleanNom}. Je souhaite vous contacter au sujet de 
  
 Voici mes coordonnées :
 - Localisation : ${cleanVille}
-- WhatsApp : ${cleanWhatsapp}`;
+- WhatsApp : ${cleanWhatsapp}
+- E-mail : ${cleanEmail}`;
 
       for (const [label, val] of Object.entries(detailsObj)) {
         htmlDetails += `

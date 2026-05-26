@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
     }
 
-    const { id, status, notes, reminderDate } = await request.json();
+    const { id, status, notes, reminderDate, name, phone, email, location } = await request.json();
     if (!id) {
       return NextResponse.json({ success: false, error: "ID requis" }, { status: 400 });
     }
@@ -37,6 +37,10 @@ export async function POST(request: Request) {
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     if (reminderDate !== undefined) updateData.reminderDate = reminderDate || null;
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
+    if (location !== undefined) updateData.location = location;
 
     const lead = await prisma.lead.update({
       where: { id },
