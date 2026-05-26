@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   BarChart3, Users, Clock, Percent, AlertCircle, Phone, MapPin, 
@@ -9,6 +9,47 @@ import {
   Calendar, ArrowUpRight, TrendingUp, Search, Bell, BellRing, Send, Filter,
   SlidersHorizontal, XCircle, Mail
 } from "lucide-react";
+
+// ─── Web Audio notification helpers ───────────────────────────────────────────
+function playNewLeadSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Pleasant two-note chime: G5 → E5
+    [[784, 0, 0.18], [659, 0.2, 0.22]].forEach(([freq, start, dur]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    });
+  } catch {/* safari/strict mode — ignore */}
+}
+
+function playReminderAlarm() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Urgent triple beep: 880 Hz
+    [0, 0.25, 0.5].forEach(start => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "square";
+      osc.frequency.setValueAtTime(880, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.18);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + 0.2);
+    });
+  } catch {/* ignore */}
+}
 
 function formatWhatsAppNumber(phone: string): string {
   let cleaned = phone.replace(/[^0-9]/g, "");
@@ -33,10 +74,15 @@ export default function AdminDashboard() {
   const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [liveRefreshing, setLiveRefreshing] = useState(false); // subtle live indicator
   const [data, setData] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
+  const leadsRef = useRef<any[]>([]); // stable ref for polling comparison
+  const [notifiedLeadIds, setNotifiedLeadIds] = useState<string[]>([]);
+  const [prevLeadsCount, setPrevLeadsCount] = useState<number | null>(null);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [reminderAlarmFired, setReminderAlarmFired] = useState(false);
   
   const [tab, setTab] = useState<"analytics" | "leads" | "orders" | "testimonials" | "services" | "stats" | "forms">("analytics");
 
@@ -156,7 +202,10 @@ export default function AdminDashboard() {
       const formsData = await formsRes.json();
 
       if (analyticsData.success) setData(analyticsData);
-      if (leadsData.success) setLeads(leadsData.leads);
+      if (leadsData.success) {
+        setLeads(leadsData.leads);
+        leadsRef.current = leadsData.leads;
+      }
       if (testimonialsData.success) setTestimonials(testimonialsData.testimonials);
       if (servicesData.success) setServices(servicesData.services);
       if (statsData.success) setStats(statsData.stats);
@@ -169,8 +218,50 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Silent background polling: leads only, every 30 seconds ──────────────
+  const pollLeads = async () => {
+    try {
+      setLiveRefreshing(true);
+      const res = await fetch("/api/admin/leads");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success) return;
+      const freshLeads: any[] = data.leads;
+      const existingIds = new Set(leadsRef.current.map((l: any) => l.id));
+      const brandNew = freshLeads.filter((l: any) => !existingIds.has(l.id));
+      if (brandNew.length > 0) {
+        // Play notification sound for each new lead (capped at 3 sounds)
+        const toPlay = Math.min(brandNew.length, 3);
+        for (let i = 0; i < toPlay; i++) {
+          setTimeout(() => playNewLeadSound(), i * 350);
+        }
+      }
+      // Check for due reminders among fresh leads
+      const now = new Date();
+      const dueReminders = freshLeads.filter((l: any) => {
+        if (!l.reminderDate) return false;
+        const rd = new Date(l.reminderDate);
+        return rd <= now && l.status !== "archived";
+      });
+      if (dueReminders.length > 0 && !reminderAlarmFired) {
+        playReminderAlarm();
+        setReminderAlarmFired(true);
+        // Reset after 5 min so alarm can fire again
+        setTimeout(() => setReminderAlarmFired(false), 5 * 60 * 1000);
+      }
+      setLeads(freshLeads);
+      leadsRef.current = freshLeads;
+    } catch { /* network hiccup — skip */ } finally {
+      setLiveRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
+    // Start real-time polling every 30 seconds
+    const interval = setInterval(pollLeads, 30_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRefresh = () => {
@@ -829,11 +920,16 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Live indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10" title="Mise à jour automatique toutes les 30 secondes">
+            <span className={`w-2 h-2 rounded-full ${liveRefreshing ? "bg-yellow-400 animate-ping" : "bg-primary-green animate-pulse"}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest text-primary-green select-none">LIVE</span>
+          </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-            title="Rafraîchir les données"
+            title="Rafraîchir toutes les données manuellement"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-primary-green" : ""}`} />
           </button>
@@ -1486,13 +1582,42 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => handleSelectLead(lead)}
-                            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all"
-                          >
-                            Suivre &amp; Relancer
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            {/* Quick WhatsApp */}
+                            <a
+                              href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(`Bonjour ${lead.name.split(" ")[0]}, c'est Victoire de Win Agro. 🌱 Je reviens vers vous concernant votre demande. Êtes-vous toujours intéressé(e) ? Je reste à votre disposition.`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Relancer sur WhatsApp"
+                              className="p-1.5 rounded-lg bg-green-900/30 hover:bg-green-500 text-green-400 hover:text-white transition-all"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" /></svg>
+                            </a>
+                            {/* Quick Email */}
+                            <button
+                              title={lead.email ? "Relancer par email" : "Email non renseigné"}
+                              disabled={!lead.email}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!lead.email) return;
+                                const subj = encodeURIComponent(`🌱 Suite à votre demande — Win Agro`);
+                                const body = encodeURIComponent(`Bonjour ${lead.name},\n\nJe reviens vers vous suite à votre demande concernant nos services Win Agro.\n\nNous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                                window.open(`mailto:${lead.email}?subject=${subj}&body=${body}`, "_blank");
+                              }}
+                              className={`p-1.5 rounded-lg transition-all ${lead.email ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+                            {/* CRM drawer */}
+                            <button
+                              onClick={() => handleSelectLead(lead)}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all text-xs cursor-pointer"
+                            >
+                              CRM
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1703,13 +1828,42 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => handleSelectLead(lead)}
-                              className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all text-xs"
-                            >
-                              Gérer la commande
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {/* Quick WhatsApp */}
+                              <a
+                                href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(`Bonjour ${lead.name.split(" ")[0]}, c'est Victoire de Win Agro. 🌱 Nous avons bien reçu votre commande catalogue. Pouvez-vous confirmer votre disponibilité pour la livraison ?`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Contacter sur WhatsApp"
+                                className="p-1.5 rounded-lg bg-green-900/30 hover:bg-green-500 text-green-400 hover:text-white transition-all"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" /></svg>
+                              </a>
+                              {/* Quick Email */}
+                              <button
+                                title={lead.email ? "Relancer par email" : "Email non renseigné"}
+                                disabled={!lead.email}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!lead.email) return;
+                                  const subj = encodeURIComponent(`🌱 Votre commande Win Agro — Confirmation de disponibilité`);
+                                  const body = encodeURIComponent(`Bonjour ${lead.name},\n\nNous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.\n\nAfin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                                  window.open(`mailto:${lead.email}?subject=${subj}&body=${body}`, "_blank");
+                                }}
+                                className={`p-1.5 rounded-lg transition-all ${lead.email ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                              </button>
+                              {/* CRM drawer */}
+                              <button
+                                onClick={() => handleSelectLead(lead)}
+                                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all text-xs cursor-pointer"
+                              >
+                                CRM
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -3055,18 +3209,20 @@ Win Agro Agri Tech Solutions`;
                             </svg>
                             Confirm Dispo (WA)
                           </a>
-                          {leadEmail && (
-                            <a
-                              href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailConfirmSubject)}&body=${encodeURIComponent(mailConfirmBody)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={handleConfirmAvailability}
-                              className="flex-1 py-2.5 px-2 rounded-xl bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-green-800/40 hover:border-primary-green shadow-xl transition-all text-xs"
-                            >
-                              <Mail className="w-3.5 h-3.5 shrink-0" />
-                              Confirm Dispo (Email)
-                            </a>
-                          )}
+                          <button
+                            onClick={() => {
+                              if (!leadEmail.trim()) {
+                                alert("Voulez-vous saisir une adresse e-mail dans le formulaire d'abord ?");
+                                return;
+                              }
+                              handleConfirmAvailability();
+                              window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailConfirmSubject)}&body=${encodeURIComponent(mailConfirmBody)}`, "_blank");
+                            }}
+                            className="flex-1 py-2.5 px-2 rounded-xl bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-green-800/40 hover:border-primary-green shadow-xl transition-all text-xs cursor-pointer"
+                          >
+                            <Mail className="w-3.5 h-3.5 shrink-0" />
+                            Confirm Dispo (Email)
+                          </button>
                         </div>
                       </div>
                     )}
@@ -3083,17 +3239,19 @@ Win Agro Agri Tech Solutions`;
                         </svg>
                         Relancer WhatsApp
                       </a>
-                      {leadEmail && (
-                        <a
-                          href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
-                        >
-                          <Mail className="w-4 h-4 shrink-0" />
-                          Relancer par Email
-                        </a>
-                      )}
+                      <button
+                        onClick={() => {
+                          if (!leadEmail.trim()) {
+                            alert("Voulez-vous saisir une adresse e-mail dans le formulaire d'abord ?");
+                            return;
+                          }
+                          window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`, "_blank");
+                        }}
+                        className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs cursor-pointer"
+                      >
+                        <Mail className="w-4 h-4 shrink-0" />
+                        Relancer par Email
+                      </button>
                     </div>
                   </div>
                 );
