@@ -36,19 +36,42 @@ export async function POST(request: Request) {
       // Fetch dynamic form configuration
       const configs = await localStore.getFormConfigs();
       const config = configs.find(f => f.key === cleanType);
-      if (!config) {
+      const isCatalogueOrder = cleanType.startsWith("Commande Catalogue");
+
+      if (!config && !isCatalogueOrder) {
         return NextResponse.json({ success: false, message: "Formulaire inconnu" }, { status: 400 });
       }
 
       // Dynamically validate and extract extra fields from the config definition
       const detailsObj: Record<string, string> = {};
-      for (const field of config.fields) {
-        const val = body[field.name];
-        if (field.required && !val) {
-          return NextResponse.json({ success: false, message: `Le champ "${field.label}" est obligatoire.` }, { status: 400 });
+      
+      if (isCatalogueOrder) {
+        // Extract products from cart (which are passed as extra body parameters starting with e/n/a)
+        const productIds = Object.keys(body).filter(k => k.startsWith("e") || k.startsWith("n") || k.startsWith("a"));
+        if (productIds.length > 0) {
+          const dbProducts = await prisma.product.findMany({
+            where: { id: { in: productIds } }
+          });
+          let total = 0;
+          dbProducts.forEach(p => {
+            const qty = Number(body[p.id]);
+            if (qty > 0) {
+              const priceText = p.price ? `${qty} × ${p.price.toLocaleString("fr-FR")} FCFA = ${(p.price * qty).toLocaleString("fr-FR")} FCFA` : `${qty} × Sur devis`;
+              detailsObj[p.name] = priceText;
+              if (p.price) total += p.price * qty;
+            }
+          });
+          detailsObj["Total estimé"] = `${total.toLocaleString("fr-FR")} FCFA`;
         }
-        if (val !== undefined) {
-          detailsObj[field.label] = sanitize(String(val));
+      } else if (config) {
+        for (const field of config.fields) {
+          const val = body[field.name];
+          if (field.required && !val) {
+            return NextResponse.json({ success: false, message: `Le champ "${field.label}" est obligatoire.` }, { status: 400 });
+          }
+          if (val !== undefined) {
+            detailsObj[field.label] = sanitize(String(val));
+          }
         }
       }
 
@@ -66,7 +89,7 @@ export async function POST(request: Request) {
         });
       }
 
-      const typeLabel = config.title;
+      const typeLabel = config ? config.title : cleanType;
       const isPartial = !!body.isPartial;
       const leadStatus = isPartial ? "abandoned" : "new";
 
