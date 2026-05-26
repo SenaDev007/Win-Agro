@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 
 import { LanguageProvider } from "@/context/LanguageContext";
+import AnalyticsTracker from "@/components/ui/AnalyticsTracker";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -224,6 +225,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#FAFAF3] text-[#4A4A4A] font-sans selection:bg-[#E6F4EC] selection:text-[#076B37]">
         <LanguageProvider>
+          <AnalyticsTracker />
           {children}
         </LanguageProvider>
 

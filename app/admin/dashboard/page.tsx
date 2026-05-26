@@ -850,19 +850,19 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Gender stats */}
+              {/* Device Type stats */}
               <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
-                <h3 className="font-serif text-base font-bold mb-4">Répartition par Genre</h3>
+                <h3 className="font-serif text-base font-bold mb-4">Répartition par Appareil</h3>
                 <div className="space-y-4">
                   {genders && genders.length > 0 ? (
                     genders.map((g: any, idx: number) => {
                       const totalUsers = genders.reduce((s: number, o: any) => s + o.users, 0);
                       const pct = totalUsers > 0 ? (g.users / totalUsers) * 100 : 0;
-                      const genderName = g.gender === "male" ? "Homme (Masculin)" : g.gender === "female" ? "Femme (Féminin)" : "Non spécifié / Autre";
+                      const deviceName = g.gender === "mobile" ? "Téléphone Mobile" : g.gender === "desktop" ? "Ordinateur (Desktop)" : g.gender === "tablet" ? "Tablette (Tablet)" : "Autre";
                       return (
                         <div key={idx} className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-semibold text-gray-300">{genderName}</span>
+                            <span className="font-semibold text-gray-300">{deviceName}</span>
                             <span className="text-gray-400 font-mono">{g.users.toLocaleString()} ({pct.toFixed(1)}%)</span>
                           </div>
                           <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
@@ -872,14 +872,14 @@ export default function AdminDashboard() {
                       );
                     })
                   ) : (
-                    <div className="text-gray-500 py-4 text-center">Aucune donnée de genre disponible</div>
+                    <div className="text-gray-500 py-4 text-center">Aucune donnée d'appareil disponible</div>
                   )}
                 </div>
               </div>
 
-              {/* Age Bracket stats */}
+              {/* Browser stats */}
               <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
-                <h3 className="font-serif text-base font-bold mb-4">Tranches d'âge</h3>
+                <h3 className="font-serif text-base font-bold mb-4">Navigateurs Internet</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                   {ageBrackets && ageBrackets.length > 0 ? (
                     ageBrackets.map((age: any, idx: number) => {
@@ -888,7 +888,7 @@ export default function AdminDashboard() {
                       return (
                         <div key={idx} className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-semibold text-gray-300">{age.bracket} ans</span>
+                            <span className="font-semibold text-gray-300">{age.bracket}</span>
                             <span className="text-gray-400 font-mono">{pct.toFixed(0)}%</span>
                           </div>
                           <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
@@ -898,7 +898,7 @@ export default function AdminDashboard() {
                       );
                     })
                   ) : (
-                    <div className="text-gray-500 py-4 text-center">Aucune donnée de tranche d'âge</div>
+                    <div className="text-gray-500 py-4 text-center">Aucune donnée de navigateurs</div>
                   )}
                 </div>
               </div>

@@ -86,3 +86,30 @@ model Lead {
 
   @@map("leads")
 }
+
+model PageView {
+  id           String   @id @default(uuid())
+  timestamp    DateTime @default(now())
+  sessionToken String   @map("session_token")
+  path         String
+  referrer     String?
+  userAgent    String?  @map("user_agent")
+  deviceType   String?  @map("device_type")
+  browser      String?
+  country      String?
+  city         String?
+
+  @@map("page_views")
+}
+
+model ActiveSession {
+  token      String   @id // sessionToken
+  lastSeen   DateTime @default(now()) @map("last_seen")
+  createdAt  DateTime @default(now()) @map("created_at")
+  deviceType String?  @map("device_type")
+  browser    String?
+  country    String?
+  city       String?
+
+  @@map("active_sessions")
+}

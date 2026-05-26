@@ -1,217 +1,187 @@
-import { BetaAnalyticsDataClient } from "@google-analytics/data";
-
-const propertyId = process.env.GA_PROPERTY_ID || "538896655";
-
-// Handle quote characters in private key when set via Windows/Vercel env vars
-let privateKey = process.env.GA_PRIVATE_KEY;
-if (privateKey && privateKey.startsWith('"') && privateKey.endsWith('"')) {
-  privateKey = privateKey.slice(1, -1);
-}
-const cleanPrivateKey = privateKey?.replace(/\\n/g, "\n");
-
-// Google Analytics Data v1 client initialization
-const analyticsClient = new BetaAnalyticsDataClient({
-  credentials: {
-    client_email: process.env.GA_CLIENT_EMAIL,
-    private_key: cleanPrivateKey,
-  },
-  projectId: process.env.GA_PROJECT_ID,
-});
+import { prisma } from "./prisma";
 
 export async function getAnalyticsData() {
   try {
-    if (!process.env.GA_CLIENT_EMAIL || !process.env.GA_PRIVATE_KEY) {
-      console.warn("⚠️ Google Analytics credentials missing, using mock data.");
-      return getMockData();
-    }
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
 
-    // 0. Fetch Realtime Metrics (Active Users right now)
-    let activeUsersRealtime = 0;
-    try {
-      const [realtimeResponse] = await analyticsClient.runRealtimeReport({
-        property: `properties/${propertyId}`,
-        metrics: [{ name: "activeUsers" }],
-      });
-      const realtimeRow = realtimeResponse.rows?.[0];
-      activeUsersRealtime = parseInt(realtimeRow?.metricValues?.[0]?.value || "0", 10);
-    } catch (e) {
-      console.warn("Could not fetch real-time active users, using fallback.", e);
-    }
-
-    // 1. Fetch Core Metrics (Active Users, Sessions, Pageviews, Bounce Rate)
-    const [response] = await analyticsClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [
-        {
-          startDate: "30daysAgo",
-          endDate: "today",
-        },
-      ],
-      metrics: [
-        { name: "activeUsers" },
-        { name: "sessions" },
-        { name: "screenPageViews" },
-        { name: "bounceRate" },
-      ],
+    // 1. Fetch Realtime Active Users
+    const activeUsersRealtime = await prisma.activeSession.count({
+      where: {
+        lastSeen: {
+          gte: threeMinutesAgo
+        }
+      }
     });
 
-    // 2. Fetch Sessions Trend (Daily over 30 days)
-    const [trendResponse] = await analyticsClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [
-        {
-          startDate: "30daysAgo",
-          endDate: "today",
-        },
-      ],
-      dimensions: [
-        { name: "date" },
-      ],
-      metrics: [
-        { name: "sessions" },
-        { name: "activeUsers" },
-      ],
-      orderBys: [
-        {
-          dimension: {
-            dimensionName: "date",
-          },
-        },
-      ],
+    // 2. Fetch Page Views in the last 30 days for metrics & aggregations
+    const allPageViews = await prisma.pageView.findMany({
+      where: {
+        timestamp: {
+          gte: thirtyDaysAgo
+        }
+      },
+      select: {
+        timestamp: true,
+        sessionToken: true,
+        path: true,
+        referrer: true,
+        deviceType: true,
+        browser: true,
+        country: true,
+        city: true
+      }
     });
 
-    // 3. Fetch Top Traffic Sources
-    const [sourcesResponse] = await analyticsClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [
-        {
-          startDate: "30daysAgo",
-          endDate: "today",
-        },
-      ],
-      dimensions: [
-        { name: "sessionDefaultChannelGroup" },
-      ],
-      metrics: [
-        { name: "sessions" },
-      ],
+    // --- Core Stats Calculations ---
+    const totalPageViews = allPageViews.length;
+    
+    // Group pageviews by sessionToken
+    const sessionMap: Record<string, { count: number; deviceType?: string; browser?: string; country?: string; city?: string }> = {};
+    allPageViews.forEach(pv => {
+      if (!sessionMap[pv.sessionToken]) {
+        sessionMap[pv.sessionToken] = { count: 0, deviceType: pv.deviceType || "Desktop", browser: pv.browser || "Autre", country: pv.country || "Inconnu", city: pv.city || "Inconnu" };
+      }
+      sessionMap[pv.sessionToken].count += 1;
     });
 
-    // 4. Fetch Top Visited Pages
-    const [pagesResponse] = await analyticsClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [
-        {
-          startDate: "30daysAgo",
-          endDate: "today",
-        },
-      ],
-      dimensions: [
-        { name: "pagePath" },
-      ],
-      metrics: [
-        { name: "screenPageViews" },
-      ],
-      limit: 10,
+    const uniqueSessions = Object.keys(sessionMap).length;
+
+    // Bounce rate: percentage of sessions with exactly 1 pageview
+    let bouncedSessionsCount = 0;
+    Object.values(sessionMap).forEach(s => {
+      if (s.count === 1) bouncedSessionsCount += 1;
     });
+    const bounceRate = uniqueSessions > 0 ? (bouncedSessionsCount / uniqueSessions) * 100 : 0;
 
-    // 5. Fetch Demographics (Gender)
-    let genderResponse;
-    try {
-      [genderResponse] = await analyticsClient.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
-        dimensions: [{ name: "userGender" }],
-        metrics: [{ name: "activeUsers" }],
-      });
-    } catch (e) {
-      console.warn("Could not fetch userGender, signals might be disabled.", e);
-    }
-
-    // 6. Fetch Demographics (Age Bracket)
-    let ageResponse;
-    try {
-      [ageResponse] = await analyticsClient.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
-        dimensions: [{ name: "userAgeBracket" }],
-        metrics: [{ name: "activeUsers" }],
-      });
-    } catch (e) {
-      console.warn("Could not fetch userAgeBracket, signals might be disabled.", e);
-    }
-
-    // 7. Fetch Locations (City / Country)
-    let locationResponse;
-    try {
-      [locationResponse] = await analyticsClient.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
-        dimensions: [{ name: "city" }, { name: "country" }],
-        metrics: [{ name: "activeUsers" }],
-        limit: 15,
-      });
-    } catch (e) {
-      console.warn("Could not fetch locations.", e);
-    }
-
-    // Parse Core Metrics
-    const row = response.rows?.[0];
     const stats = {
-      activeUsers: activeUsersRealtime || parseInt(row?.metricValues?.[0]?.value || "0", 10),
-      sessions: parseInt(row?.metricValues?.[1]?.value || "0", 10),
-      pageViews: parseInt(row?.metricValues?.[2]?.value || "0", 10),
-      bounceRate: parseFloat(row?.metricValues?.[3]?.value || "0") * 100,
+      activeUsers: activeUsersRealtime || (uniqueSessions > 0 ? 1 : 0), // Fallback to 1 if active session exists in DB but heartbeat not sent
+      sessions: uniqueSessions,
+      pageViews: totalPageViews,
+      bounceRate: parseFloat(bounceRate.toFixed(1))
     };
 
-    // Parse Daily Trend
-    const dailyTrend = (trendResponse.rows || []).map(r => {
-      const dateStr = r.dimensionValues?.[0]?.value || "";
-      const day = dateStr.slice(6, 8);
-      const month = dateStr.slice(4, 6);
-      return {
-        date: `${day}/${month}`,
-        sessions: parseInt(r.metricValues?.[0]?.value || "0", 10),
-        users: parseInt(r.metricValues?.[1]?.value || "0", 10),
+    // --- Daily Trend ---
+    // Create map for last 30 days
+    const dailyTrendMap: Record<string, { date: string; sessions: Set<string>; users: Set<string>; pageviews: number }> = {};
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const dateKey = `${day}/${month}`;
+      dailyTrendMap[dateKey] = {
+        date: dateKey,
+        sessions: new Set<string>(),
+        users: new Set<string>(),
+        pageviews: 0
       };
+    }
+
+    allPageViews.forEach(pv => {
+      const pvDate = new Date(pv.timestamp);
+      const day = String(pvDate.getDate()).padStart(2, '0');
+      const month = String(pvDate.getMonth() + 1).padStart(2, '0');
+      const dateKey = `${day}/${month}`;
+      
+      if (dailyTrendMap[dateKey]) {
+        dailyTrendMap[dateKey].sessions.add(pv.sessionToken);
+        dailyTrendMap[dateKey].users.add(pv.sessionToken);
+        dailyTrendMap[dateKey].pageviews += 1;
+      }
     });
 
-    // Parse Sources
-    const trafficSources = (sourcesResponse.rows || []).map(r => ({
-      source: r.dimensionValues?.[0]?.value || "Direct",
-      sessions: parseInt(r.metricValues?.[0]?.value || "0", 10),
+    const dailyTrend = Object.values(dailyTrendMap).map(item => ({
+      date: item.date,
+      sessions: item.sessions.size,
+      users: item.users.size
     }));
 
-    // Parse Pages
-    const topPages = (pagesResponse.rows || []).map(r => ({
-      path: r.dimensionValues?.[0]?.value || "/",
-      views: parseInt(r.metricValues?.[0]?.value || "0", 10),
+    // --- Traffic Sources ---
+    const sourcesMap: Record<string, number> = {};
+    allPageViews.forEach(pv => {
+      let source = "Direct";
+      const ref = pv.referrer ? pv.referrer.toLowerCase() : "";
+      
+      if (!ref) {
+        source = "Direct";
+      } else if (ref.includes("wa.me") || ref.includes("whatsapp")) {
+        source = "WhatsApp / Referral";
+      } else if (ref.includes("google") || ref.includes("bing") || ref.includes("yahoo") || ref.includes("duckduckgo")) {
+        source = "Organic Search";
+      } else if (ref.includes("facebook") || ref.includes("t.co") || ref.includes("twitter") || ref.includes("instagram") || ref.includes("linkedin")) {
+        source = "Social Media";
+      } else {
+        try {
+          const url = new URL(pv.referrer!);
+          source = url.hostname.replace("www.", "");
+        } catch {
+          source = "Referral";
+        }
+      }
+
+      sourcesMap[source] = (sourcesMap[source] || 0) + 1;
+    });
+
+    const trafficSources = Object.entries(sourcesMap)
+      .map(([source, count]) => ({ source, sessions: count }))
+      .sort((a, b) => b.sessions - a.sessions);
+
+    // --- Top Visited Pages ---
+    const pagesMap: Record<string, number> = {};
+    allPageViews.forEach(pv => {
+      const path = pv.path || "/";
+      pagesMap[path] = (pagesMap[path] || 0) + 1;
+    });
+
+    const topPages = Object.entries(pagesMap)
+      .map(([path, views]) => ({ path, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    // --- Devices (To replace Gender charts) ---
+    const devicesMap: Record<string, number> = { Mobile: 0, Desktop: 0, Tablet: 0 };
+    Object.values(sessionMap).forEach(s => {
+      const device = s.deviceType || "Desktop";
+      devicesMap[device] = (devicesMap[device] || 0) + 1;
+    });
+    const genders = Object.entries(devicesMap).map(([gender, users]) => ({
+      gender: gender.toLowerCase(), // keep key as 'gender' to minimize UI code changes
+      users
     }));
 
-    // Parse Genders
-    const genders = genderResponse?.rows
-      ? genderResponse.rows.map(r => ({
-          gender: r.dimensionValues?.[0]?.value || "unknown",
-          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
-        }))
-      : [];
+    // --- Browsers (To replace Age Brackets charts) ---
+    const browsersMap: Record<string, number> = {};
+    Object.values(sessionMap).forEach(s => {
+      const browser = s.browser || "Autre";
+      browsersMap[browser] = (browsersMap[browser] || 0) + 1;
+    });
+    const ageBrackets = Object.entries(browsersMap).map(([bracket, users]) => ({
+      bracket, // keep key as 'bracket' to minimize UI code changes
+      users
+    })).sort((a, b) => b.users - a.users);
 
-    // Parse Age Brackets
-    const ageBrackets = ageResponse?.rows
-      ? ageResponse.rows.map(r => ({
-          bracket: r.dimensionValues?.[0]?.value || "unknown",
-          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
-        }))
-      : [];
+    // --- Locations ---
+    const locationsMap: Record<string, { city: string; country: string; users: Set<string> }> = {};
+    allPageViews.forEach(pv => {
+      const city = pv.city || "Inconnu";
+      const country = pv.country || "Inconnu";
+      const key = `${city}-${country}`;
 
-    // Parse Locations
-    const locations = locationResponse?.rows
-      ? locationResponse.rows.map(r => ({
-          city: r.dimensionValues?.[0]?.value || "Unknown",
-          country: r.dimensionValues?.[1]?.value || "Unknown",
-          users: parseInt(r.metricValues?.[0]?.value || "0", 10),
-        }))
-      : [];
+      if (!locationsMap[key]) {
+        locationsMap[key] = { city, country, users: new Set<string>() };
+      }
+      locationsMap[key].users.add(pv.sessionToken);
+    });
+
+    const locations = Object.values(locationsMap)
+      .map(item => ({
+        city: item.city,
+        country: item.country,
+        users: item.users.size
+      }))
+      .sort((a, b) => b.users - a.users)
+      .slice(0, 15);
 
     return {
       success: true,
@@ -219,77 +189,22 @@ export async function getAnalyticsData() {
       dailyTrend,
       trafficSources,
       topPages,
-      genders,
-      ageBrackets,
-      locations,
+      genders,      // Represents Device Type now
+      ageBrackets,  // Represents Browsers now
+      locations
     };
   } catch (error: any) {
-    console.error("❌ Error fetching GA4 report:", error);
+    console.error("❌ Error fetching database analytics:", error);
     return {
       success: false,
-      error: error.message || "Erreur inconnue lors de la récupération des données",
-      ...getMockData(),
+      error: error.message || "Erreur interne",
+      stats: { activeUsers: 0, sessions: 0, pageViews: 0, bounceRate: 0 },
+      dailyTrend: [],
+      trafficSources: [],
+      topPages: [],
+      genders: [],
+      ageBrackets: [],
+      locations: []
     };
   }
-}
-
-function getMockData() {
-  const dailyTrend = [];
-  const now = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    dailyTrend.push({
-      date: `${day}/${month}`,
-      sessions: Math.floor(80 + Math.random() * 150 + (i === 15 || i === 28 ? 100 : 0)),
-      users: Math.floor(60 + Math.random() * 110),
-    });
-  }
-
-  return {
-    isMock: true,
-    stats: {
-      activeUsers: 1420,
-      sessions: 3840,
-      pageViews: 9280,
-      bounceRate: 42.5,
-    },
-    dailyTrend,
-    trafficSources: [
-      { source: "Direct", sessions: 1540 },
-      { source: "Organic Search", sessions: 1280 },
-      { source: "WhatsApp / Referral", sessions: 820 },
-      { source: "Social Media", sessions: 200 },
-    ],
-    topPages: [
-      { path: "/", views: 5120 },
-      { path: "/formation/elevage-volaille", views: 2130 },
-      { path: "/produits/provendes", views: 1040 },
-      { path: "/vision", views: 540 },
-      { path: "/partenaires", views: 450 },
-    ],
-    genders: [
-      { gender: "female", users: 680 },
-      { gender: "male", users: 710 },
-      { gender: "unknown", users: 30 }
-    ],
-    ageBrackets: [
-      { bracket: "18-24", users: 210 },
-      { bracket: "25-34", users: 580 },
-      { bracket: "35-44", users: 390 },
-      { bracket: "45-54", users: 180 },
-      { bracket: "55-64", users: 40 },
-      { bracket: "65+", users: 20 }
-    ],
-    locations: [
-      { city: "Cotonou", country: "Bénin", users: 650 },
-      { city: "Porto-Novo", country: "Bénin", users: 320 },
-      { city: "Parakou", country: "Bénin", users: 180 },
-      { city: "Abomey-Calavi", country: "Bénin", users: 140 },
-      { city: "Paris", country: "France", users: 60 },
-      { city: "Lomé", country: "Togo", users: 40 },
-      { city: "Dakar", country: "Sénégal", users: 30 }
-    ],
-  };
 }
