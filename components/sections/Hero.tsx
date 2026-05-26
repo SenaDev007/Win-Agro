@@ -10,6 +10,21 @@ export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mountVideo, setMountVideo] = useState(false);
+  const [statsValue, setStatsValue] = useState("500+");
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.stats)) {
+          const s1 = data.stats.find((s: any) => s.id === "s1");
+          if (s1) {
+            setStatsValue(`${s1.value}${s1.suffix}`);
+          }
+        }
+      })
+      .catch(err => console.warn("Failed to load hero stats:", err));
+  }, []);
 
   useEffect(() => {
     // Only load the 4.6MB video on desktop to optimize mobile page load speeds and data usage
@@ -108,7 +123,7 @@ export default function Hero() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-yellow opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-yellow"></span>
             </span>
-            <Sprout className="w-4 h-4 text-accent-yellow shrink-0" /> Plus de 500+ éleveurs déjà accompagnés au Bénin
+            <Sprout className="w-4 h-4 text-accent-yellow shrink-0" /> Plus de {statsValue} éleveurs déjà accompagnés au Bénin
           </motion.div>
 
           {/* Staggered Main Title (H1) */}
