@@ -39,8 +39,8 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        // URL sans espace, absolue grâce à metadataBase
-        url: "/og-image.png",
+        // Logo Win Agro — affiché lors du partage du lien
+        url: "/logo-win-agro.png",
         width: 1200,
         height: 630,
         alt: "Win Agro Agri Tech Solutions — Formation & Élevage au Bénin",
@@ -51,12 +51,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Win Agro Agri Tech — Formation & Élevage au Bénin",
     description: "Formations pratiques, installation de ferme et vente d'animaux sélectionnés au Bénin.",
-    images: ["/og-image.png"],
+    images: ["/logo-win-agro.png"],
   },
   icons: {
-    icon: "/og-image.png",
-    shortcut: "/og-image.png",
-    apple: "/og-image.png",
+    icon: "/logo-win-agro.png",
+    shortcut: "/logo-win-agro.png",
+    apple: "/logo-win-agro.png",
   },
   robots: {
     index: true,
