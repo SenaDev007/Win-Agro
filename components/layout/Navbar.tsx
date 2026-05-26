@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { PillBase } from "@/components/ui/3d-adaptive-navigation-bar";
 import LeadModal from "@/components/ui/LeadModal";
 
-export default function Navbar() {
+export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,7 +49,9 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
+          hasPromo ? "top-10" : "top-0"
+        } ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-md border-b border-primary-green py-2"
             : "bg-white py-4 border-b border-transparent"

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { localStore } from "@/lib/db";
 
-// API to fetch and edit products in the catalog (GET / POST / DELETE)
+// GET — fetch all products (public, used by client catalogue modal)
 export async function GET() {
   try {
     const products = await localStore.getProducts();
@@ -12,6 +12,7 @@ export async function GET() {
   }
 }
 
+// POST — create, update, set-promo, or quick patch
 export async function POST(request: Request) {
   try {
     const session = await getSession();
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { action, id, name, description, price, unit, category, isActive } = body;
+    const { action, id, name, description, price, unit, category, isActive, promoPrice, promoUntil } = body;
 
     // 1. Create action
     if (action === "create") {
@@ -33,7 +34,9 @@ export async function POST(request: Request) {
         description: description || "",
         price: price === "" || price === null || price === undefined ? null : Number(price),
         unit,
-        isActive: isActive !== undefined ? Boolean(isActive) : true
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+        promoPrice: promoPrice === "" || promoPrice === null || promoPrice === undefined ? null : Number(promoPrice),
+        promoUntil: promoUntil || null
       });
       if (newProduct) {
         return NextResponse.json({ success: true, product: newProduct });
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Update action
+    // 2. Update action (full product details)
     if (action === "update") {
       if (!id) {
         return NextResponse.json({ success: false, error: "ID produit manquant" }, { status: 400 });
@@ -53,7 +56,9 @@ export async function POST(request: Request) {
         description,
         price: price === "" || price === null || price === undefined ? null : Number(price),
         unit,
-        isActive: isActive !== undefined ? Boolean(isActive) : undefined
+        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+        promoPrice: promoPrice === "" || promoPrice === null || promoPrice === undefined ? null : Number(promoPrice),
+        promoUntil: promoUntil || null
       });
       if (success) {
         return NextResponse.json({ success: true });
@@ -62,7 +67,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Fallback: Quick update (price or active status only)
+    // 3. Set-promo action (quick promo update without touching other fields)
+    if (action === "set-promo") {
+      if (!id) {
+        return NextResponse.json({ success: false, error: "ID produit manquant" }, { status: 400 });
+      }
+      const resolvedPromoPrice = promoPrice === "" || promoPrice === null || promoPrice === undefined ? null : Number(promoPrice);
+      const resolvedPromoUntil = promoUntil || null;
+      const success = await localStore.updateProductPromo(id, resolvedPromoPrice, resolvedPromoUntil);
+      if (success) {
+        return NextResponse.json({ success: true });
+      } else {
+        return NextResponse.json({ success: false, error: "Impossible de mettre à jour la promo" }, { status: 500 });
+      }
+    }
+
+    // 4. Fallback: Quick patch (price or active status only)
     if (!id) {
       return NextResponse.json({ success: false, error: "ID produit manquant" }, { status: 400 });
     }
@@ -82,6 +102,7 @@ export async function POST(request: Request) {
   }
 }
 
+// DELETE — remove a product by id
 export async function DELETE(request: Request) {
   try {
     const session = await getSession();

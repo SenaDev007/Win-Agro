@@ -17,6 +17,7 @@
   --animate-pulse-slow: pulse-slow 2s infinite ease-in-out;
   --animate-float: float 6s ease-in-out infinite;
   --animate-subtle-spin: subtle-spin 20s linear infinite;
+  --animate-marquee: marquee 30s linear infinite;
 
   @keyframes pulse-slow {
     0%, 100% {
@@ -55,6 +56,14 @@
     }
     to {
       transform: rotate(360deg);
+    }
+  }
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
     }
   }
 }

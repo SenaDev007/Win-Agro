@@ -31,6 +31,8 @@ export interface CatalogueProduct {
   description: string;
   price: number | null; // null = "Sur devis"
   unit: string;
+  promoPrice?: number | null;
+  promoUntil?: string | null;
 }
 
 export interface CatalogueCategory {
@@ -97,6 +99,62 @@ export const catalogueData: CatalogueCategory[] = [
   },
 ];
 
+/* ─── Promo Helpers & Components ────────────────────────── */
+const isPromoActive = (product: CatalogueProduct) => {
+  if (product.promoPrice === null || product.promoPrice === undefined) return false;
+  if (!product.promoUntil) return false;
+  return new Date(product.promoUntil) > new Date();
+};
+
+function CountdownTimer({ until }: { until: string }) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    expired: boolean;
+  }>({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const difference = +new Date(until) - +new Date();
+      if (difference <= 0) {
+        return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+      }
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+        expired: false,
+      };
+    };
+
+    setTimeLeft(calculateTime());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTime());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [until]);
+
+  if (timeLeft.expired) {
+    return <span className="text-[10px] text-red-500 font-sans font-bold">Offre expirée</span>;
+  }
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div className="flex items-center gap-1 text-[10px] font-sans text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-100 mt-1.5 w-fit">
+      <span className="font-bold flex items-center gap-0.5">⏱️ Promo finit dans :</span>
+      <span className="font-mono bg-red-100 px-1 rounded">{timeLeft.days}j</span>
+      <span className="font-mono bg-red-100 px-1 rounded">{pad(timeLeft.hours)}h</span>
+      <span className="font-mono bg-red-100 px-1 rounded">{pad(timeLeft.minutes)}m</span>
+      <span className="font-mono bg-red-100 px-1 rounded">{pad(timeLeft.seconds)}s</span>
+    </div>
+  );
+}
+
 /* ─── Product Card ────────────────────────────────────────── */
 function ProductCard({
   product,
@@ -109,6 +167,8 @@ function ProductCard({
   onAdd: () => void;
   onRemove: () => void;
 }) {
+  const promoActive = isPromoActive(product);
+
   return (
     <motion.div
       layout
@@ -117,14 +177,28 @@ function ProductCard({
       <div className="flex-1">
         <p className="font-serif font-bold text-primary-deep text-sm leading-snug">{product.name}</p>
         <p className="text-xs text-gray-500 font-sans mt-1 leading-relaxed">{product.description}</p>
+        {promoActive && product.promoUntil && (
+          <CountdownTimer until={product.promoUntil} />
+        )}
       </div>
 
       <div className="flex items-center justify-between mt-auto gap-2">
         <div>
           {product.price !== null ? (
-            <p className="text-primary-green font-bold text-sm font-sans">
-              {product.price.toLocaleString("fr-FR")} <span className="text-xs font-normal text-gray-400">{product.unit}</span>
-            </p>
+            promoActive ? (
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400 line-through">
+                  {product.price.toLocaleString("fr-FR")} {product.unit}
+                </span>
+                <span className="text-red-600 font-extrabold text-sm font-sans flex items-center gap-1">
+                  🔥 {product.promoPrice?.toLocaleString("fr-FR")} <span className="text-xs font-normal text-gray-400">{product.unit}</span>
+                </span>
+              </div>
+            ) : (
+              <p className="text-primary-green font-bold text-sm font-sans">
+                {product.price.toLocaleString("fr-FR")} <span className="text-xs font-normal text-gray-400">{product.unit}</span>
+              </p>
+            )
           ) : (
             <p className="text-amber-600 font-bold text-xs font-sans italic">Sur devis</p>
           )}
@@ -209,7 +283,9 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
         description: p.description || "",
         price: p.price,
         unit: p.unit.startsWith("FCFA") ? p.unit : `FCFA / ${p.unit}`,
-        isActive: p.isActive
+        isActive: p.isActive,
+        promoPrice: p.promoPrice,
+        promoUntil: p.promoUntil
       }));
 
     return {
@@ -272,7 +348,10 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
     : [];
 
   const totalItems = cartItems.reduce((s, i) => s + i.qty, 0);
-  const totalPrice = cartItems.reduce((s, i) => s + (i.product.price ?? 0) * i.qty, 0);
+  const totalPrice = cartItems.reduce((s, i) => {
+    const activePrice = isPromoActive(i.product) ? (i.product.promoPrice ?? i.product.price ?? 0) : (i.product.price ?? 0);
+    return s + activePrice * i.qty;
+  }, 0);
 
   const handleSendOrder = () => {
     if (!category || cartItems.length === 0) return;
@@ -304,7 +383,9 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
       };
 
       cartItems.forEach(item => {
-        detailsObj[`Commande: ${item.product.name}`] = `${item.qty} × ${item.product.price?.toLocaleString("fr-FR") || "Sur devis"} FCFA`;
+        const promoActive = isPromoActive(item.product);
+        const activePrice = promoActive ? (item.product.promoPrice ?? item.product.price ?? 0) : (item.product.price ?? 0);
+        detailsObj[`Commande: ${item.product.name}`] = `${item.qty} × ${activePrice.toLocaleString("fr-FR")} FCFA${promoActive ? " (PROMO)" : ""}`;
       });
 
       // 1. Submit lead to database/API (notifies backoffice and email!)
@@ -332,9 +413,11 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
       }
 
       // 2. Format the WhatsApp message with user coordinates + cart items + polite closing message
-      const lines = cartItems.map(item =>
-        `- ${item.product.name} × ${item.qty} = ${(item.product.price! * item.qty).toLocaleString("fr-FR")} FCFA`
-      );
+      const lines = cartItems.map(item => {
+        const promoActive = isPromoActive(item.product);
+        const activePrice = promoActive ? (item.product.promoPrice ?? item.product.price ?? 0) : (item.product.price ?? 0);
+        return `- ${item.product.name} × ${item.qty} = ${(activePrice * item.qty).toLocaleString("fr-FR")} FCFA${promoActive ? " (PROMO)" : ""}`;
+      });
 
       const message = `Bonjour Victoire,
  

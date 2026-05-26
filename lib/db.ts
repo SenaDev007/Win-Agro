@@ -27,6 +27,8 @@ export interface CatalogProduct {
   price: number | null;
   unit: string;
   isActive: boolean;
+  promoPrice: number | null;
+  promoUntil: string | null; // ISO date string
 }
 
 export interface TestimonialRecord {
@@ -290,7 +292,17 @@ class LocalStore {
     const products = await prisma.product.findMany({
       orderBy: { id: "asc" }
     });
-    return products;
+    return products.map(p => ({
+      id: p.id,
+      category: p.category,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      unit: p.unit,
+      isActive: p.isActive,
+      promoPrice: p.promoPrice ?? null,
+      promoUntil: p.promoUntil ? p.promoUntil.toISOString() : null
+    }));
   }
 
   async updateProductPriceAndStatus(id: string, price: number | null, isActive: boolean): Promise<boolean> {
@@ -340,10 +352,22 @@ class LocalStore {
           description: product.description,
           price: product.price,
           unit: product.unit,
-          isActive: product.isActive ?? true
+          isActive: product.isActive ?? true,
+          promoPrice: product.promoPrice ?? null,
+          promoUntil: product.promoUntil ? new Date(product.promoUntil) : null
         }
       });
-      return created;
+      return {
+        id: created.id,
+        category: created.category,
+        name: created.name,
+        description: created.description,
+        price: created.price,
+        unit: created.unit,
+        isActive: created.isActive,
+        promoPrice: created.promoPrice ?? null,
+        promoUntil: created.promoUntil ? created.promoUntil.toISOString() : null
+      };
     } catch (err) {
       console.error("Error creating product in db:", err);
       return null;
@@ -372,12 +396,32 @@ class LocalStore {
           description: data.description,
           price: data.price,
           unit: data.unit,
-          isActive: data.isActive
+          isActive: data.isActive,
+          promoPrice: data.promoPrice !== undefined ? data.promoPrice : undefined,
+          promoUntil: data.promoUntil !== undefined
+            ? (data.promoUntil ? new Date(data.promoUntil) : null)
+            : undefined
         }
       });
       return true;
     } catch (err) {
       console.error("Error updating product details in db:", err);
+      return false;
+    }
+  }
+
+  async updateProductPromo(id: string, promoPrice: number | null, promoUntil: string | null): Promise<boolean> {
+    try {
+      await prisma.product.update({
+        where: { id },
+        data: {
+          promoPrice,
+          promoUntil: promoUntil ? new Date(promoUntil) : null
+        }
+      });
+      return true;
+    } catch (err) {
+      console.error("Error updating product promo in db:", err);
       return false;
     }
   }

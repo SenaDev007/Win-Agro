@@ -25,13 +25,15 @@ model Stat {
 }
 
 model Product {
-  id          String   @id
+  id          String    @id
   category    String
   name        String
   description String
   price       Float?
   unit        String
-  isActive    Boolean  @default(true) @map("is_active")
+  isActive    Boolean   @default(true) @map("is_active")
+  promoPrice  Float?    @map("promo_price")
+  promoUntil  DateTime? @map("promo_until")
 
   @@map("products")
 }
