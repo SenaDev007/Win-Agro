@@ -16,13 +16,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // ── Redirection www → non-www (301 permanent, unification du domaine canonical)
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.winagrotech.com' }],
-        destination: 'https://winagrotech.com/:path*',
-        permanent: true,
-      },
       { source: '/index', destination: '/', permanent: true },
       { source: '/home', destination: '/', permanent: true },
     ]
