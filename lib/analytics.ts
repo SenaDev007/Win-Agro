@@ -1,6 +1,6 @@
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 
-const propertyId = process.env.GA_PROPERTY_ID || "431102910";
+const propertyId = process.env.GA_PROPERTY_ID || "538896655";
 
 // Handle quote characters in private key when set via Windows/Vercel env vars
 let privateKey = process.env.GA_PRIVATE_KEY;
@@ -23,6 +23,19 @@ export async function getAnalyticsData() {
     if (!process.env.GA_CLIENT_EMAIL || !process.env.GA_PRIVATE_KEY) {
       console.warn("⚠️ Google Analytics credentials missing, using mock data.");
       return getMockData();
+    }
+
+    // 0. Fetch Realtime Metrics (Active Users right now)
+    let activeUsersRealtime = 0;
+    try {
+      const [realtimeResponse] = await analyticsClient.runRealtimeReport({
+        property: `properties/${propertyId}`,
+        metrics: [{ name: "activeUsers" }],
+      });
+      const realtimeRow = realtimeResponse.rows?.[0];
+      activeUsersRealtime = parseInt(realtimeRow?.metricValues?.[0]?.value || "0", 10);
+    } catch (e) {
+      console.warn("Could not fetch real-time active users, using fallback.", e);
     }
 
     // 1. Fetch Core Metrics (Active Users, Sessions, Pageviews, Bounce Rate)
@@ -145,7 +158,7 @@ export async function getAnalyticsData() {
     // Parse Core Metrics
     const row = response.rows?.[0];
     const stats = {
-      activeUsers: parseInt(row?.metricValues?.[0]?.value || "0", 10),
+      activeUsers: activeUsersRealtime || parseInt(row?.metricValues?.[0]?.value || "0", 10),
       sessions: parseInt(row?.metricValues?.[1]?.value || "0", 10),
       pageViews: parseInt(row?.metricValues?.[2]?.value || "0", 10),
       bounceRate: parseFloat(row?.metricValues?.[3]?.value || "0") * 100,
