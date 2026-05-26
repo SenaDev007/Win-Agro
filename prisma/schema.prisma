@@ -79,6 +79,7 @@ model Lead {
   date         String
   name         String
   phone        String
+  email        String? @default("")
   type         String
   location     String
   details      Json

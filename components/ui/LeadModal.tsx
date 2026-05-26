@@ -83,7 +83,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
   const [path, setPath] = useState<string | null>(initialPath);
   const [step, setStep] = useState<Step>(initialPath ? "form" : "choice");
   const [form, setForm] = useState<Record<string, string>>({
-    prenom: "", nom: "", whatsapp: "", ville: ""
+    prenom: "", nom: "", whatsapp: "", email: "", ville: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -131,7 +131,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
       setTimeout(() => {
         setPath(initialPath);
         setStep(initialPath ? "form" : "choice");
-        setForm({ prenom: "", nom: "", whatsapp: "", ville: "" });
+        setForm({ prenom: "", nom: "", whatsapp: "", email: "", ville: "" });
         setError("");
         setWhatsappUrl("");
       }, 300);
@@ -168,6 +168,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
         prenom: updatedForm.prenom || "",
         nom: updatedForm.nom || "",
         whatsapp: updatedForm.whatsapp || "",
+        email: updatedForm.email || "",
         ville: updatedForm.ville || "",
         isPartial: true,
         sessionToken: token || undefined,
@@ -246,6 +247,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
         prenom: form.prenom,
         nom: form.nom,
         whatsapp: form.whatsapp,
+        email: form.email,
         ville: form.ville,
         sessionToken: token || undefined,
         utmSource: utmSource || undefined,
@@ -396,6 +398,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                         <Input label="Nom" name="nom" value={form.nom} onChange={handleChange} onBlur={handleBlur} placeholder="Agbodjan" required />
                       </div>
                       <Input label="Numéro WhatsApp" name="whatsapp" value={form.whatsapp} onChange={handleChange} onBlur={handleBlur} type="tel" placeholder="+229 01 XX XX XX XX" required />
+                      <Input label="Adresse e-mail" name="email" value={form.email} onChange={handleChange} onBlur={handleBlur} type="email" placeholder="exemple@email.com" required />
                       <Input label="Ville / Localisation" name="ville" value={form.ville} onChange={handleChange} onBlur={handleBlur} placeholder="Cotonou, Parakou, Porto-Novo..." required />
 
                       {/* Dynamic fields from chosen form config */}

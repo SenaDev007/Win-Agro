@@ -21,14 +21,15 @@ export async function POST(request: Request) {
     const isModalForm = body && typeof body === "object" && "type" in body;
 
     if (isModalForm) {
-      const { type, prenom, nom, whatsapp, ville } = body;
+      const { type, prenom, nom, whatsapp, ville, email } = body;
       const cleanType = sanitize(type);
       const cleanPrenom = sanitize(prenom);
       const cleanNom = sanitize(nom);
       const cleanWhatsapp = sanitize(whatsapp);
       const cleanVille = sanitize(ville);
+      const cleanEmail = sanitize(email);
 
-      if (!cleanType || !cleanPrenom || !cleanNom || !cleanWhatsapp || !cleanVille) {
+      if (!cleanType || !cleanPrenom || !cleanNom || !cleanWhatsapp || !cleanVille || !cleanEmail) {
         return NextResponse.json({ success: false, message: "Informations requises manquantes" }, { status: 400 });
       }
 
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
           data: {
             name: `${cleanPrenom} ${cleanNom}`,
             phone: cleanWhatsapp,
+            email: cleanEmail,
             type: typeLabel,
             location: cleanVille,
             details: detailsObj as any,
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
             date: new Date().toISOString(),
             name: `${cleanPrenom} ${cleanNom}`,
             phone: cleanWhatsapp,
+            email: cleanEmail,
             type: typeLabel,
             location: cleanVille,
             details: detailsObj as any,
@@ -157,13 +160,18 @@ Voici mes coordonnées :
                   <tr>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Prénom & Nom</td>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanPrenom} ${cleanNom}</td>
-                  </tr>
-                  <tr>
+                               <tr>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">WhatsApp / Tél</td>
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
                       <a href="tel:${cleanWhatsapp}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanWhatsapp}</a>
                       | 
                       <a href="https://wa.me/${cleanWhatsapp.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Email</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
+                      <a href="mailto:${cleanEmail}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanEmail}</a>
                     </td>
                   </tr>
                   <tr>
@@ -197,6 +205,7 @@ Voici mes coordonnées :
           prenom: cleanPrenom,
           nom: cleanNom,
           whatsapp: cleanWhatsapp,
+          email: cleanEmail,
           ville: cleanVille,
           type: cleanType,
           whatsappUrl: `https://wa.me/2290161336548?text=${encodeURIComponent(whatsappMessage)}`,
