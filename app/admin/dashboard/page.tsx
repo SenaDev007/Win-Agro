@@ -73,16 +73,7 @@ function resolveLeadEmail(lead: any): string {
   return "";
 }
 
-// ── Signature Win Agro pour les emails mailto: (texte brut uniquement) ─────────
-const WIN_AGRO_SIGNATURE = `
-
-──────────────────────────────
-🌱 Victoire | Win Agro Agri Tech Solutions
-📞 +229 01 61 33 65 48
-✉  contact@winagrotech.com
-🌐 winagrotech.com
-──────────────────────────────
-L'élevage sain, de A à Z. · Bénin`;
+// Signature is now handled server-side in the HTML template footer
 
 function formatWhatsAppNumber(phone: string): string {
   let cleaned = phone.replace(/[^0-9]/g, "");
@@ -161,6 +152,18 @@ export default function AdminDashboard() {
     title: "",
     message: "",
     onConfirm: () => {}
+  });
+
+  // Email sending state and toast notification
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [emailToast, setEmailToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+    type: "success"
   });
 
   // Stats State
@@ -460,6 +463,74 @@ export default function AdminDashboard() {
         }
       }
     });
+  };
+
+  const sendEmailToClient = async (lead: any, subject: string, bodyText: string, onSentSuccess?: () => void) => {
+    const resolvedEmail = resolveLeadEmail(lead);
+    if (!resolvedEmail) {
+      setEmailToast({
+        show: true,
+        message: "Adresse e-mail introuvable pour ce prospect.",
+        type: "error"
+      });
+      return;
+    }
+
+    setSendingEmailId(lead.id);
+    setEmailToast({
+      show: true,
+      message: `Envoi de l'email à ${resolvedEmail}...`,
+      type: "info"
+    });
+
+    try {
+      const res = await fetch("/api/admin/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          to: resolvedEmail,
+          subject,
+          body: bodyText,
+          leadId: lead.id
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setEmailToast({
+          show: true,
+          message: `Email envoyé avec succès à ${resolvedEmail} !`,
+          type: "success"
+        });
+        if (onSentSuccess) {
+          onSentSuccess();
+        }
+        await loadDashboardData();
+      } else {
+        setEmailToast({
+          show: true,
+          message: `Erreur d'envoi : ${data.error || "Inconnue"}`,
+          type: "error"
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setEmailToast({
+        show: true,
+        message: "Erreur réseau lors de l'envoi de l'email.",
+        type: "error"
+      });
+    } finally {
+      setSendingEmailId(null);
+      setTimeout(() => {
+        setEmailToast(prev => {
+          if (prev.type === "info") return prev;
+          return { ...prev, show: false };
+        });
+      }, 5000);
+    }
   };
 
   const handleUpdateCredentials = async (e: React.FormEvent) => {
@@ -1630,24 +1701,33 @@ export default function AdminDashboard() {
                             {/* Quick Email — auto-resolve from lead.email or details */}
                             {(() => {
                               const resolvedEmail = resolveLeadEmail(lead);
-                              const subj = encodeURIComponent(`🌱 Suite à votre demande — Win Agro`);
-                              const body = encodeURIComponent(`Bonjour ${lead.name},
+                              const subj = `🌱 Suite à votre demande — Win Agro`;
+                              const body = `Bonjour ${lead.name},
 
 Je reviens vers vous suite à votre demande concernant nos services Win Agro.
 
-Nous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.${WIN_AGRO_SIGNATURE}`);
+Nous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.`;
+                              const isSending = sendingEmailId === lead.id;
                               return (
                                 <button
                                   title={resolvedEmail ? `Relancer par email — ${resolvedEmail}` : "Email non renseigné par le client"}
-                                  disabled={!resolvedEmail}
+                                  disabled={!resolvedEmail || isSending}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (!resolvedEmail) return;
-                                    window.open(`mailto:${resolvedEmail}?subject=${subj}&body=${body}`, "_blank");
+                                    sendEmailToClient(lead, subj, body);
                                   }}
-                                  className={`p-1.5 rounded-lg transition-all ${resolvedEmail ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                                  className={`p-1.5 rounded-lg transition-all ${
+                                    resolvedEmail && !isSending
+                                      ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer"
+                                      : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"
+                                  }`}
                                 >
-                                  <Mail className="w-3.5 h-3.5" />
+                                  {isSending ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Mail className="w-3.5 h-3.5" />
+                                  )}
                                 </button>
                               );
                             })()}
@@ -1885,24 +1965,33 @@ Nous serions ravis de vous accompagner et restons entièrement disponibles pour 
                               {/* Quick Email — auto-resolve from lead.email or details */}
                               {(() => {
                                 const resolvedEmail = resolveLeadEmail(lead);
-                                const subj = encodeURIComponent(`🌱 Votre commande Win Agro — Confirmation de disponibilité`);
-                                const body = encodeURIComponent(`Bonjour ${lead.name},
+                                const subj = `🌱 Votre commande Win Agro — Confirmation de disponibilité`;
+                                const body = `Bonjour ${lead.name},
 
 Nous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.
 
-Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?${WIN_AGRO_SIGNATURE}`);
+Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?`;
+                                const isSending = sendingEmailId === lead.id;
                                 return (
                                   <button
                                     title={resolvedEmail ? `Confirmer dispo par email — ${resolvedEmail}` : "Email non renseigné par le client"}
-                                    disabled={!resolvedEmail}
+                                    disabled={!resolvedEmail || isSending}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (!resolvedEmail) return;
-                                      window.open(`mailto:${resolvedEmail}?subject=${subj}&body=${body}`, "_blank");
+                                      sendEmailToClient(lead, subj, body);
                                     }}
-                                    className={`p-1.5 rounded-lg transition-all ${resolvedEmail ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer" : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"}`}
+                                    className={`p-1.5 rounded-lg transition-all ${
+                                      resolvedEmail && !isSending
+                                        ? "bg-blue-900/30 hover:bg-blue-500 text-blue-400 hover:text-white cursor-pointer"
+                                        : "bg-white/5 text-gray-600 cursor-not-allowed opacity-40"
+                                    }`}
                                   >
-                                    <Mail className="w-3.5 h-3.5" />
+                                    {isSending ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Mail className="w-3.5 h-3.5" />
+                                    )}
                                   </button>
                                 );
                               })()}
@@ -3145,7 +3234,7 @@ Afin de structurer au mieux notre collaboration (étude de faisabilité, infrast
 
 Quelles seraient vos disponibilités cette semaine ?
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
                 } else if (typeClean.includes("formation") || typeClean.includes("inscription")) {
                   // Formation
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Merci pour votre intérêt pour notre formation pro ("${selectedLead.type}"). C'est le meilleur moyen d'éviter les erreurs de débutant qui coûtent cher. Nous allons ouvrir les prochaines sessions de formation pratique. Préférez-vous un accompagnement en présentiel ou en ligne pour démarrer ?`;
@@ -3160,7 +3249,7 @@ Pour finaliser votre inscription et adapter le programme à vos disponibilités,
 
 Dans l'attente de votre retour, je reste à votre entière disposition.
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
                 } else if (typeClean.includes("consultation") || typeClean.includes("diagnostic")) {
                   // Consultation
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai vu votre alerte concernant vos difficultés d'élevage. Dans notre domaine, chaque jour de retard peut aggraver la situation (mortalité, baisse de ponte). Je souhaite faire un point d'urgence avec vous. Pouvez-vous m'appeler ou m'envoyer les détails de vos pertes actuelles par message ?`;
@@ -3171,7 +3260,7 @@ J'ai bien reçu votre demande de diagnostic pour votre élevage. Face aux anomal
 
 Afin d'établir un premier pré-diagnostic et d'organiser une intervention rapide (physique ou à distance), je vous invite à me recontacter par téléphone au plus vite, ou à me décrire précisément les symptômes observés sur votre cheptel.
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
                 } else if (typeClean.includes("catalogue") || typeClean.includes("commande")) {
                   // Commande Catalogue - Relance standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre panier de commande dans notre catalogue. Je souhaite valider avec vous les quantités, les tarifs du jour et planifier la livraison de vos produits/sujets. Êtes-vous disponible pour confirmer cela ensemble ?`;
@@ -3184,7 +3273,7 @@ J'ai bien reçu le récapitulatif de votre commande de catalogue. Afin de vous g
 
 Je vous invite à me confirmer vos disponibilités pour un bref appel de validation, ou à répondre directement à ce mail.
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
 
                   // Commande Catalogue - Confirmation officielle de disponibilité
                   const orderItems = Object.entries(selectedLead.details || {}).filter(([k]) => k !== "Total estimé").map(([k, v]) => `- ${k} : ${v}`).join("\n");
@@ -3197,7 +3286,7 @@ ${orderItems}
 
 Afin de planifier la livraison de votre commande ou d'organiser son retrait dans nos locaux, nous vous invitons à nous préciser vos disponibilités par retour de mail ou par WhatsApp.
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
                 } else {
                   // Contact Standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre message de contact. Je suis à votre écoute pour vous conseiller et vous guider dans vos projets agricoles au Bénin. Comment puis-je vous aider aujourd'hui ?`;
@@ -3210,7 +3299,7 @@ Quel que soit votre projet ou votre problématique agricole, notre équipe se ti
 
 Pouvez-vous m'en dire plus sur vos attentes afin que je vous oriente vers la solution la plus adaptée ?
 
-Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
+Merci à vous, en attendant votre réponse.`;
                 }
 
                 const isOrder = typeClean.includes("catalogue") || typeClean.includes("commande");
@@ -3241,19 +3330,23 @@ Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                             Confirm Dispo (WA)
                           </a>
                           <button
-                            disabled={!leadEmail.trim()}
+                            disabled={!leadEmail.trim() || sendingEmailId === selectedLead.id}
                             onClick={() => {
                               handleConfirmAvailability();
-                              window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailConfirmSubject)}&body=${encodeURIComponent(mailConfirmBody)}`, "_blank");
+                              sendEmailToClient(selectedLead, mailConfirmSubject, mailConfirmBody);
                             }}
                             title={!leadEmail.trim() ? "Email non renseigné par le client" : `Envoyer à ${leadEmail}`}
                             className={`flex-1 py-2.5 px-2 rounded-xl font-black inline-flex items-center justify-center gap-1.5 border shadow-xl transition-all text-xs ${
-                              leadEmail.trim()
+                              leadEmail.trim() && sendingEmailId !== selectedLead.id
                                 ? "bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] border-green-800/40 hover:border-primary-green cursor-pointer"
                                 : "bg-white/5 text-gray-600 border-white/5 cursor-not-allowed opacity-40"
                             }`}
                           >
-                            <Mail className="w-3.5 h-3.5 shrink-0" />
+                            {sendingEmailId === selectedLead.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                            ) : (
+                              <Mail className="w-3.5 h-3.5 shrink-0" />
+                            )}
                             Confirm Dispo (Email)
                           </button>
                         </div>
@@ -3273,18 +3366,22 @@ Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                         Relancer WhatsApp
                       </a>
                       <button
-                        disabled={!leadEmail.trim()}
+                        disabled={!leadEmail.trim() || sendingEmailId === selectedLead.id}
                         onClick={() => {
-                          window.open(`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`, "_blank");
+                          sendEmailToClient(selectedLead, mailSubject, mailBody);
                         }}
                         title={!leadEmail.trim() ? "Email non renseigné par le client" : `Relancer ${leadEmail}`}
                         className={`flex-1 py-3 px-2 rounded-xl font-black inline-flex items-center justify-center gap-1.5 border shadow-xl transition-all text-xs ${
-                          leadEmail.trim()
+                          leadEmail.trim() && sendingEmailId !== selectedLead.id
                             ? "bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] border-white/10 hover:border-primary-green cursor-pointer"
                             : "bg-white/5 text-gray-600 border-white/5 cursor-not-allowed opacity-40"
                         }`}
                       >
-                        <Mail className="w-4 h-4 shrink-0" />
+                        {sendingEmailId === selectedLead.id ? (
+                          <Loader2 className="w-4.5 h-4.5 animate-spin shrink-0" />
+                        ) : (
+                          <Mail className="w-4.5 h-4.5 shrink-0" />
+                        )}
                         {leadEmail.trim() ? `Relancer — ${leadEmail}` : "Relancer par Email"}
                       </button>
                     </div>
@@ -3294,6 +3391,32 @@ Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* Branded Email Toast Notification */}
+      {emailToast.show && (
+        <div className={`fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-2xl border shadow-2xl flex items-center gap-3 transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 ${
+          emailToast.type === "success" 
+            ? "bg-[#07130A]/90 border-green-850/50 text-green-300 backdrop-blur-md"
+            : emailToast.type === "error"
+            ? "bg-red-950/90 border-red-800 text-red-300 backdrop-blur-md"
+            : "bg-[#07130A]/90 border-blue-800 text-blue-300 backdrop-blur-md"
+        }`}>
+          {emailToast.type === "success" ? (
+            <CheckCircle2 className="w-4.5 h-4.5 text-green-400 shrink-0" />
+          ) : emailToast.type === "error" ? (
+            <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+          ) : (
+            <Loader2 className="w-4.5 h-4.5 animate-spin text-blue-400 shrink-0" />
+          )}
+          <span className="text-[11px] font-bold font-sans">{emailToast.message}</span>
+          <button 
+            onClick={() => setEmailToast(prev => ({ ...prev, show: false }))} 
+            className="text-white/40 hover:text-white transition-colors ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
