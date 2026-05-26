@@ -1176,11 +1176,12 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-lg font-bold text-[10px] capitalize border ${
                             lead.status === "new" ? "bg-red-950/40 text-red-400 border-red-900/30" :
+                            lead.status === "abandoned" ? "bg-orange-950/40 text-orange-400 border-orange-900/30 animate-pulse" :
                             lead.status === "contacted" ? "bg-yellow-950/40 text-yellow-400 border-yellow-900/30" :
                             lead.status === "won" ? "bg-green-950/40 text-green-400 border-green-900/30" :
                             "bg-gray-800/40 text-gray-400 border border-gray-700/30"
                           }`}>
-                            {lead.status === "new" ? "Nouveau" : lead.status === "contacted" ? "Contacté" : lead.status === "won" ? "Converti" : "Archivé"}
+                            {lead.status === "new" ? "Nouveau" : lead.status === "abandoned" ? "Formulaire Abandonné" : lead.status === "contacted" ? "Contacté" : lead.status === "won" ? "Converti" : "Archivé"}
                           </span>
                         </td>
                         <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
@@ -2258,6 +2259,7 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-[#0F2214] border border-white/10 rounded-xl text-white font-bold focus:outline-none focus:ring-1 focus:ring-primary-green"
                     >
                       <option value="new">Nouveau (Non contacté)</option>
+                      <option value="abandoned">Abandonné (Saisie partielle)</option>
                       <option value="contacted">En discussion (Contacté)</option>
                       <option value="won">Converti (Client gagné ✓)</option>
                       <option value="archived">Archivé (Perdu / Fermé)</option>

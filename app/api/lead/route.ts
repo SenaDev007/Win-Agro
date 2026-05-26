@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { leadFormSchema, serviceLabels } from "@/lib/validations";
 import { localStore } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 // Initialize Resend with API Key (if provided in environment variables)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -50,19 +51,68 @@ export async function POST(request: Request) {
         }
       }
 
-      // Log lead to database
+      // Check if this session has a previously abandoned/partial lead
+      let existingLead: any = null;
+      if (body.sessionToken) {
+        existingLead = await prisma.lead.findFirst({
+          where: {
+            sessionToken: body.sessionToken,
+            status: "abandoned"
+          },
+          orderBy: {
+            date: "desc"
+          }
+        });
+      }
+
       const typeLabel = config.title;
-      const newLead = await localStore.addLead({
-        name: `${cleanPrenom} ${cleanNom}`,
-        phone: cleanWhatsapp,
-        type: typeLabel,
-        location: cleanVille,
-        details: detailsObj,
-        sessionToken: body.sessionToken || null,
-        utmSource: body.utmSource || null,
-        utmMedium: body.utmMedium || null,
-        utmCampaign: body.utmCampaign || null
-      });
+      const isPartial = !!body.isPartial;
+      const leadStatus = isPartial ? "abandoned" : "new";
+
+      let leadRecord;
+      if (existingLead) {
+        leadRecord = await prisma.lead.update({
+          where: { id: existingLead.id },
+          data: {
+            name: `${cleanPrenom} ${cleanNom}`,
+            phone: cleanWhatsapp,
+            type: typeLabel,
+            location: cleanVille,
+            details: detailsObj as any,
+            status: leadStatus,
+            utmSource: body.utmSource || existingLead.utmSource,
+            utmMedium: body.utmMedium || existingLead.utmMedium,
+            utmCampaign: body.utmCampaign || existingLead.utmCampaign
+          }
+        });
+      } else {
+        const id = "l_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+        leadRecord = await prisma.lead.create({
+          data: {
+            id,
+            date: new Date().toISOString(),
+            name: `${cleanPrenom} ${cleanNom}`,
+            phone: cleanWhatsapp,
+            type: typeLabel,
+            location: cleanVille,
+            details: detailsObj as any,
+            status: leadStatus,
+            sessionToken: body.sessionToken || null,
+            utmSource: body.utmSource || null,
+            utmMedium: body.utmMedium || null,
+            utmCampaign: body.utmCampaign || null
+          }
+        });
+      }
+
+      // If it's a partial auto-save, return early without sending emails
+      if (isPartial) {
+        return NextResponse.json({
+          success: true,
+          message: "Sauvegarde partielle réussie",
+          leadId: leadRecord.id
+        });
+      }
 
       // Construct dynamic message copy
       let htmlDetails = "";

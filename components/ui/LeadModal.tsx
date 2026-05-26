@@ -29,19 +29,21 @@ interface LeadModalProps {
   initialPath?: string | null;
 }
 
-const Select = ({ label, name, value, onChange, options, required }: {
+const Select = ({ label, name, value, onChange, onBlur, options, required }: {
   label: string; name: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLSelectElement>) => void;
   options: string[]; required?: boolean;
 }) => (
-  <div className="flex flex-col gap-1.5">
+  <div className="flex flex-col gap-1.5 font-sans">
     <label className="text-xs font-bold text-primary-deep uppercase tracking-wider">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
     <select
       name={name}
       value={value}
       onChange={onChange}
+      onBlur={onBlur}
       required={required}
-      className="w-full px-3 py-2.5 rounded-xl border border-primary-green/20 bg-white text-sm text-gray-700 font-sans focus:outline-none focus:ring-2 focus:ring-primary-green/30 transition-all"
+      className="w-full px-3 py-2.5 rounded-xl border border-primary-green/20 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-green/30 transition-all"
     >
       <option value="">-- Choisir --</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -49,21 +51,23 @@ const Select = ({ label, name, value, onChange, options, required }: {
   </div>
 );
 
-const Input = ({ label, name, value, onChange, type = "text", placeholder, required }: {
+const Input = ({ label, name, value, onChange, onBlur, type = "text", placeholder, required }: {
   label: string; name: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   type?: string; placeholder?: string; required?: boolean;
 }) => (
-  <div className="flex flex-col gap-1.5">
+  <div className="flex flex-col gap-1.5 font-sans">
     <label className="text-xs font-bold text-primary-deep uppercase tracking-wider">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
     <input
       type={type}
       name={name}
       value={value}
       onChange={onChange}
+      onBlur={onBlur}
       placeholder={placeholder}
       required={required}
-      className="w-full px-3 py-2.5 rounded-xl border border-primary-green/20 bg-white text-sm text-gray-700 font-sans placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-green/30 transition-all"
+      className="w-full px-3 py-2.5 rounded-xl border border-primary-green/20 bg-white text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-green/30 transition-all"
     />
   </div>
 );
@@ -148,8 +152,60 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
+  const handleAutoSave = async (updatedForm: typeof form) => {
+    if (!path) return;
+    // Only auto-save if we have at least a WhatsApp number or first name
+    if (!updatedForm.whatsapp && !updatedForm.prenom) return;
+
+    try {
+      const token = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_session") : null;
+      const utmSource = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_source") : null;
+      const utmMedium = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_medium") : null;
+      const utmCampaign = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_campaign") : null;
+
+      const payload: Record<string, any> = {
+        type: path,
+        prenom: updatedForm.prenom || "",
+        nom: updatedForm.nom || "",
+        whatsapp: updatedForm.whatsapp || "",
+        ville: updatedForm.ville || "",
+        isPartial: true,
+        sessionToken: token || undefined,
+        utmSource: utmSource || undefined,
+        utmMedium: utmMedium || undefined,
+        utmCampaign: utmCampaign || undefined
+      };
+
+      if (currentConfig) {
+        for (const field of currentConfig.fields) {
+          payload[field.name] = updatedForm[field.name] || "";
+        }
+      }
+
+      await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.warn("Failed to auto-save partial lead details:", err);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => {
+      const updated = { ...prev, [name]: value };
+      // Trigger auto-save immediately on select fields, or on input change if it's longer
+      if (e.target.tagName === "SELECT") {
+        handleAutoSave(updated);
+      }
+      return updated;
+    });
+  };
+
+  const handleBlur = () => {
+    handleAutoSave(form);
   };
 
   const handleChoose = (choice: string) => {
@@ -336,11 +392,11 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                       
                       {/* Common fields */}
                       <div className="grid grid-cols-2 gap-3">
-                        <Input label="Prénom" name="prenom" value={form.prenom} onChange={handleChange} placeholder="Kokou" required />
-                        <Input label="Nom" name="nom" value={form.nom} onChange={handleChange} placeholder="Agbodjan" required />
+                        <Input label="Prénom" name="prenom" value={form.prenom} onChange={handleChange} onBlur={handleBlur} placeholder="Kokou" required />
+                        <Input label="Nom" name="nom" value={form.nom} onChange={handleChange} onBlur={handleBlur} placeholder="Agbodjan" required />
                       </div>
-                      <Input label="Numéro WhatsApp" name="whatsapp" value={form.whatsapp} onChange={handleChange} type="tel" placeholder="+229 01 XX XX XX XX" required />
-                      <Input label="Ville / Localisation" name="ville" value={form.ville} onChange={handleChange} placeholder="Cotonou, Parakou, Porto-Novo..." required />
+                      <Input label="Numéro WhatsApp" name="whatsapp" value={form.whatsapp} onChange={handleChange} onBlur={handleBlur} type="tel" placeholder="+229 01 XX XX XX XX" required />
+                      <Input label="Ville / Localisation" name="ville" value={form.ville} onChange={handleChange} onBlur={handleBlur} placeholder="Cotonou, Parakou, Porto-Novo..." required />
 
                       {/* Dynamic fields from chosen form config */}
                       {currentConfig?.fields.map((field) => {
@@ -352,6 +408,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                               name={field.name}
                               value={form[field.name] || ""}
                               onChange={handleChange}
+                              onBlur={handleBlur}
                               required={field.required}
                               options={field.options || []}
                             />
@@ -364,6 +421,7 @@ export default function LeadModal({ isOpen, onClose, initialPath = null }: LeadM
                               name={field.name}
                               value={form[field.name] || ""}
                               onChange={handleChange}
+                              onBlur={handleBlur}
                               required={field.required}
                               placeholder={`Saisir votre ${field.label.toLowerCase()}`}
                             />
