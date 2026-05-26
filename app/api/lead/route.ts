@@ -137,6 +137,8 @@ Voici mes coordonnées :
         whatsappMessage += `\n- ${label} : ${val}`;
       }
 
+      whatsappMessage += `\n\nMerci à vous, en attendant votre réponse.`;
+
       const emailSubject = `🌱 ${config.title} — ${cleanPrenom} ${cleanNom}`;
 
       // Send email via Resend
