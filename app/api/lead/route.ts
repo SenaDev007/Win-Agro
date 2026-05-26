@@ -13,6 +13,45 @@ function sanitize(str: any): string {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
 }
 
+// ── Win Agro branded HTML email signature (shared across all Resend emails) ────────
+function winAgroEmailHeader(): string {
+  return `
+    <div style="background: linear-gradient(135deg, #07130A 0%, #0F2214 100%); padding: 28px 32px; border-radius: 12px 12px 0 0; text-align: center;">
+      <img
+        src="https://winagrotech.com/Logo Win Agro.png"
+        alt="Win Agro"
+        width="72"
+        height="72"
+        style="border-radius: 16px; display: block; margin: 0 auto 12px;"
+      />
+      <h1 style="color: #4ADE80; font-family: Georgia, serif; font-size: 20px; font-weight: bold; margin: 0 0 4px;">Win Agro</h1>
+      <p style="color: #86EFAC; font-size: 11px; margin: 0; letter-spacing: 2px; text-transform: uppercase; font-family: sans-serif;">Agri Tech Solutions &bull; B&eacute;nin</p>
+    </div>
+  `;
+}
+
+function winAgroEmailFooter(): string {
+  return `
+    <div style="background-color: #07130A; border-radius: 0 0 12px 12px; padding: 24px 32px; text-align: center; margin-top: 0;">
+      <img
+        src="https://winagrotech.com/Logo Win Agro.png"
+        alt="Win Agro"
+        width="40"
+        height="40"
+        style="border-radius: 10px; display: block; margin: 0 auto 12px; opacity: 0.9;"
+      />
+      <p style="color: #4ADE80; font-family: Georgia, serif; font-size: 14px; font-weight: bold; margin: 0 0 4px;">Win Agro Agri Tech Solutions</p>
+      <p style="color: #86EFAC; font-size: 11px; margin: 0 0 12px; font-family: sans-serif;">L&apos;élevage sain, de A à Z. &bull; B&eacute;nin</p>
+      <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+        <a href="https://winagrotech.com" style="color: #4ADE80; font-size: 11px; text-decoration: none; font-family: sans-serif;">🌐 winagrotech.com</a>
+        <a href="mailto:contact@winagrotech.com" style="color: #4ADE80; font-size: 11px; text-decoration: none; font-family: sans-serif;">✉️ contact@winagrotech.com</a>
+        <a href="https://wa.me/2290161336548" style="color: #4ADE80; font-size: 11px; text-decoration: none; font-family: sans-serif;">📱 WhatsApp</a>
+      </div>
+      <p style="color: #4B6355; font-size: 10px; margin: 16px 0 0; font-family: sans-serif;">&copy; 2026 Win Agro Agri Tech Solutions &mdash; Tous droits r&eacute;serv&eacute;s.</p>
+    </div>
+  `;
+}
+
 function formatWhatsAppNumber(phone: string): string {
   let cleaned = phone.replace(/[^0-9]/g, "");
   if (!cleaned) return "";
@@ -192,49 +231,50 @@ Voici mes coordonnées :
             to: [notificationEmail],
             subject: emailSubject,
             html: `
-              <div style="font-family: sans-serif; padding: 20px; color: #4A4A4A; max-width: 600px; border: 1px solid #E6F4EC; border-radius: 8px; background-color: #FAFAF3;">
-                <h2 style="color: #076B37; border-bottom: 2px solid #098947; padding-bottom: 10px;">Nouveau Prospect — ${typeLabel}</h2>
-                <p>Un prospect a soumis le formulaire d'intérêt en ligne :</p>
-                
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <div style="font-family: sans-serif; max-width: 620px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+              ${winAgroEmailHeader()}
+              <div style="padding: 28px 32px; background-color: #FAFAF8; border-left: 1px solid #E0F0E8; border-right: 1px solid #E0F0E8;">
+                <h2 style="color: #076B37; font-family: Georgia, serif; font-size: 18px; border-bottom: 2px solid #098947; padding-bottom: 10px; margin-top: 0;">🌱 Nouveau Prospect &mdash; ${typeLabel}</h2>
+                <p style="color: #555; font-size: 14px;">Un prospect a soumis le formulaire d'int&eacute;r&ecirc;t en ligne&nbsp;:</p>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;">
                   <tr style="background-color: #E6F4EC;">
-                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #C8E4D0; color: #076B37;">Champ</th>
-                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #C8E4D0; color: #076B37;">Valeur</th>
+                    <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #C8E4D0; color: #076B37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Champ</th>
+                    <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #C8E4D0; color: #076B37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Valeur</th>
                   </tr>
                   <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Prénom & Nom</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanPrenom} ${cleanNom}</td>
-                               <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">WhatsApp / Tél</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">Pr&eacute;nom &amp; Nom</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; color: #222;">${cleanPrenom} ${cleanNom}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">WhatsApp / T&eacute;l</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC;">
                       <a href="tel:${cleanWhatsapp}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanWhatsapp}</a>
-                      | 
-                      <a href="https://wa.me/${formatWhatsAppNumber(cleanWhatsapp)}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="https://wa.me/${formatWhatsAppNumber(cleanWhatsapp)}" style="color: #098947; font-weight: bold; text-decoration: none;">💬 Discuter sur WhatsApp</a>
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Email</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">E-mail</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC;">
                       <a href="mailto:${cleanEmail}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanEmail}</a>
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Localisation / Ville</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanVille}</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">Localisation</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; color: #222;">${cleanVille}</td>
                   </tr>
                   ${htmlDetails}
                 </table>
-                
-                <div style="margin-top: 30px; padding: 15px; background-color: #FFFBE0; border-left: 4px solid #FDDD00; border-radius: 4px;">
-                  <p style="margin: 0; font-size: 14px; color: #C8A800; font-weight: bold;">Action recommandée :</p>
-                  <p style="margin: 5px 0 0 0; font-size: 14px;">Recontacte ce prospect sous 24h par appel direct ou WhatsApp. C'est le secret pour convertir à coup sûr ! 🌱</p>
+
+                <div style="margin-top: 24px; padding: 16px 20px; background-color: #FFFBE0; border-left: 4px solid #FDDD00; border-radius: 6px;">
+                  <p style="margin: 0; font-size: 13px; color: #A07800; font-weight: bold;">⚡ Action recommand&eacute;e</p>
+                  <p style="margin: 6px 0 0; font-size: 13px; color: #555;">Recontacte ce prospect sous 24h par appel direct ou WhatsApp. C'est le secret pour convertir &agrave; coup s&ucirc;r ! 🌱</p>
                 </div>
-                
-                <footer style="margin-top: 40px; font-size: 12px; color: #7A7A7A; text-align: center; border-top: 1px solid #E6F4EC; padding-top: 15px;">
-                  © 2026 Win Agro Agri Tech Solutions. Tous droits réservés.
-                </footer>
               </div>
-            `,
+              ${winAgroEmailFooter()}
+            </div>
+          `
           });
           emailSent = !!emailResult.data;
         } catch (emailError) {
@@ -297,45 +337,45 @@ Voici mes coordonnées :
           to: [notificationEmail],
           subject: `🌱 Nouveau lead Win Agro — ${serviceLabel} — ${cleanFullName}`,
           html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #4A4A4A; max-width: 600px; border: 1px solid #E6F4EC; border-radius: 8px; background-color: #FAFAF3;">
-              <h2 style="color: #076B37; border-bottom: 2px solid #098947; padding-bottom: 10px;">Nouveau Contact Win Agro</h2>
-              <p>Un visiteur a soumis une demande d'accompagnement ou une commande sur le site internet :</p>
-              
-              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <tr style="background-color: #E6F4EC;">
-                  <th style="text-align: left; padding: 8px; border-bottom: 1px solid #C8E4D0; color: #076B37;">Champ</th>
-                  <th style="text-align: left; padding: 8px; border-bottom: 1px solid #C8E4D0; color: #076B37;">Valeur</th>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Nom complet</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">${cleanFullName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">WhatsApp / Tél</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
-                    <a href="tel:${cleanPhone}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanPhone}</a>
-                    | 
-                    <a href="https://wa.me/${formatWhatsAppNumber(cleanPhone)}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Intérêt</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; color: #076B37; font-weight: bold;">${serviceLabel}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-weight: bold;">Message</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #E6F4EC; font-style: italic;">${cleanMessage || "Aucun message fourni"}</td>
-                </tr>
-              </table>
-              
-              <div style="margin-top: 30px; padding: 15px; background-color: #FFFBE0; border-left: 4px solid #FDDD00; border-radius: 4px;">
-                <p style="margin: 0; font-size: 14px; color: #C8A800; font-weight: bold;">Action recommandée :</p>
-                <p style="margin: 5px 0 0 0; font-size: 14px;">Recontacte ce lead sous 24h par appel direct ou WhatsApp. C'est le secret pour convertir à coup sûr ! 🌱</p>
+            <div style="font-family: sans-serif; max-width: 620px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12);">
+              ${winAgroEmailHeader()}
+              <div style="padding: 28px 32px; background-color: #FAFAF8; border-left: 1px solid #E0F0E8; border-right: 1px solid #E0F0E8;">
+                <h2 style="color: #076B37; font-family: Georgia, serif; font-size: 18px; border-bottom: 2px solid #098947; padding-bottom: 10px; margin-top: 0;">📩 Nouveau Contact Win Agro</h2>
+                <p style="color: #555; font-size: 14px;">Un visiteur a soumis une demande sur le site internet&nbsp;:</p>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;">
+                  <tr style="background-color: #E6F4EC;">
+                    <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #C8E4D0; color: #076B37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Champ</th>
+                    <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #C8E4D0; color: #076B37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Valeur</th>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">Nom complet</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; color: #222;">${cleanFullName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">WhatsApp / T&eacute;l</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC;">
+                      <a href="tel:${cleanPhone}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanPhone}</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="https://wa.me/${formatWhatsAppNumber(cleanPhone)}" style="color: #098947; font-weight: bold; text-decoration: none;">💬 Discuter sur WhatsApp</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">Int&eacute;r&ecirc;t</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; color: #076B37; font-weight: bold;">${serviceLabel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-weight: bold; color: #333;">Message</td>
+                    <td style="padding: 10px 12px; border-bottom: 1px solid #E6F4EC; font-style: italic; color: #555;">${cleanMessage || "Aucun message fourni"}</td>
+                  </tr>
+                </table>
+
+                <div style="margin-top: 24px; padding: 16px 20px; background-color: #FFFBE0; border-left: 4px solid #FDDD00; border-radius: 6px;">
+                  <p style="margin: 0; font-size: 13px; color: #A07800; font-weight: bold;">⚡ Action recommand&eacute;e</p>
+                  <p style="margin: 6px 0 0; font-size: 13px; color: #555;">Recontacte ce lead sous 24h par appel direct ou WhatsApp. C'est le secret pour convertir &agrave; coup s&ucirc;r ! 🌱</p>
+                </div>
               </div>
-              
-              <footer style="margin-top: 40px; font-size: 12px; color: #7A7A7A; text-align: center; border-top: 1px solid #E6F4EC; padding-top: 15px;">
-                © 2026 Win Agro Agri Tech Solutions. Tous droits réservés.
-              </footer>
+              ${winAgroEmailFooter()}
             </div>
           `,
         });

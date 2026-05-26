@@ -73,6 +73,17 @@ function resolveLeadEmail(lead: any): string {
   return "";
 }
 
+// ── Signature Win Agro pour les emails mailto: (texte brut uniquement) ─────────
+const WIN_AGRO_SIGNATURE = `
+
+──────────────────────────────
+🌱 Victoire | Win Agro Agri Tech Solutions
+📞 +229 01 61 33 65 48
+✉  contact@winagrotech.com
+🌐 winagrotech.com
+──────────────────────────────
+L'élevage sain, de A à Z. · Bénin`;
+
 function formatWhatsAppNumber(phone: string): string {
   let cleaned = phone.replace(/[^0-9]/g, "");
   if (!cleaned) return "";
@@ -1620,7 +1631,11 @@ export default function AdminDashboard() {
                             {(() => {
                               const resolvedEmail = resolveLeadEmail(lead);
                               const subj = encodeURIComponent(`🌱 Suite à votre demande — Win Agro`);
-                              const body = encodeURIComponent(`Bonjour ${lead.name},\n\nJe reviens vers vous suite à votre demande concernant nos services Win Agro.\n\nNous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                              const body = encodeURIComponent(`Bonjour ${lead.name},
+
+Je reviens vers vous suite à votre demande concernant nos services Win Agro.
+
+Nous serions ravis de vous accompagner et restons entièrement disponibles pour répondre à vos questions ou planifier un échange.${WIN_AGRO_SIGNATURE}`);
                               return (
                                 <button
                                   title={resolvedEmail ? `Relancer par email — ${resolvedEmail}` : "Email non renseigné par le client"}
@@ -1871,7 +1886,11 @@ export default function AdminDashboard() {
                               {(() => {
                                 const resolvedEmail = resolveLeadEmail(lead);
                                 const subj = encodeURIComponent(`🌱 Votre commande Win Agro — Confirmation de disponibilité`);
-                                const body = encodeURIComponent(`Bonjour ${lead.name},\n\nNous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.\n\nAfin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?\n\nMerci à vous, en attendant votre réponse.\n\nBien cordialement,\nVictoire\nWin Agro Agri Tech Solutions`);
+                                const body = encodeURIComponent(`Bonjour ${lead.name},
+
+Nous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.
+
+Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?${WIN_AGRO_SIGNATURE}`);
                                 return (
                                   <button
                                     title={resolvedEmail ? `Confirmer dispo par email — ${resolvedEmail}` : "Email non renseigné par le client"}
@@ -3126,9 +3145,7 @@ Afin de structurer au mieux notre collaboration (étude de faisabilité, infrast
 
 Quelles seraient vos disponibilités cette semaine ?
 
-Bien cordialement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                 } else if (typeClean.includes("formation") || typeClean.includes("inscription")) {
                   // Formation
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Merci pour votre intérêt pour notre formation pro ("${selectedLead.type}"). C'est le meilleur moyen d'éviter les erreurs de débutant qui coûtent cher. Nous allons ouvrir les prochaines sessions de formation pratique. Préférez-vous un accompagnement en présentiel ou en ligne pour démarrer ?`;
@@ -3143,9 +3160,7 @@ Pour finaliser votre inscription et adapter le programme à vos disponibilités,
 
 Dans l'attente de votre retour, je reste à votre entière disposition.
 
-Chaleureusement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                 } else if (typeClean.includes("consultation") || typeClean.includes("diagnostic")) {
                   // Consultation
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai vu votre alerte concernant vos difficultés d'élevage. Dans notre domaine, chaque jour de retard peut aggraver la situation (mortalité, baisse de ponte). Je souhaite faire un point d'urgence avec vous. Pouvez-vous m'appeler ou m'envoyer les détails de vos pertes actuelles par message ?`;
@@ -3156,11 +3171,7 @@ J'ai bien reçu votre demande de diagnostic pour votre élevage. Face aux anomal
 
 Afin d'établir un premier pré-diagnostic et d'organiser une intervention rapide (physique ou à distance), je vous invite à me recontacter par téléphone au plus vite, ou à me décrire précisément les symptômes observés sur votre cheptel.
 
-Restant à vos côtés pour redresser la barre de votre exploitation.
-
-Cordialement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                 } else if (typeClean.includes("catalogue") || typeClean.includes("commande")) {
                   // Commande Catalogue - Relance standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre panier de commande dans notre catalogue. Je souhaite valider avec vous les quantités, les tarifs du jour et planifier la livraison de vos produits/sujets. Êtes-vous disponible pour confirmer cela ensemble ?`;
@@ -3173,11 +3184,7 @@ J'ai bien reçu le récapitulatif de votre commande de catalogue. Afin de vous g
 
 Je vous invite à me confirmer vos disponibilités pour un bref appel de validation, ou à répondre directement à ce mail.
 
-En vous remerciant pour votre confiance.
-
-Bien cordialement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
 
                   // Commande Catalogue - Confirmation officielle de disponibilité
                   const orderItems = Object.entries(selectedLead.details || {}).filter(([k]) => k !== "Total estimé").map(([k, v]) => `- ${k} : ${v}`).join("\n");
@@ -3190,11 +3197,7 @@ ${orderItems}
 
 Afin de planifier la livraison de votre commande ou d'organiser son retrait dans nos locaux, nous vous invitons à nous préciser vos disponibilités par retour de mail ou par WhatsApp.
 
-Merci à vous, en attendant votre réponse.
-
-Bien cordialement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                 } else {
                   // Contact Standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre message de contact. Je suis à votre écoute pour vous conseiller et vous guider dans vos projets agricoles au Bénin. Comment puis-je vous aider aujourd'hui ?`;
@@ -3207,11 +3210,7 @@ Quel que soit votre projet ou votre problématique agricole, notre équipe se ti
 
 Pouvez-vous m'en dire plus sur vos attentes afin que je vous oriente vers la solution la plus adaptée ?
 
-Dans l'attente de vous lire, je vous souhaite une excellente journée.
-
-Bien cordialement,
-Victoire
-Win Agro Agri Tech Solutions`;
+Merci à vous, en attendant votre réponse.${WIN_AGRO_SIGNATURE}`;
                 }
 
                 const isOrder = typeClean.includes("catalogue") || typeClean.includes("commande");
