@@ -329,6 +329,60 @@ class LocalStore {
     }
   }
 
+  async createProduct(product: Omit<CatalogProduct, "id">): Promise<CatalogProduct | null> {
+    try {
+      const id = `${product.category[0] || 'p'}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const created = await prisma.product.create({
+        data: {
+          id,
+          category: product.category,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          unit: product.unit,
+          isActive: product.isActive ?? true
+        }
+      });
+      return created;
+    } catch (err) {
+      console.error("Error creating product in db:", err);
+      return null;
+    }
+  }
+
+  async deleteProduct(id: string): Promise<boolean> {
+    try {
+      await prisma.product.delete({
+        where: { id }
+      });
+      return true;
+    } catch (err) {
+      console.error("Error deleting product in db:", err);
+      return false;
+    }
+  }
+
+  async updateProductDetails(id: string, data: Partial<Omit<CatalogProduct, "id">>): Promise<boolean> {
+    try {
+      await prisma.product.update({
+        where: { id },
+        data: {
+          category: data.category,
+          name: data.name,
+          description: data.description,
+          price: data.price,
+          unit: data.unit,
+          isActive: data.isActive
+        }
+      });
+      return true;
+    } catch (err) {
+      console.error("Error updating product details in db:", err);
+      return false;
+    }
+  }
+
+
   // --- Admin Settings ---
   async getAdminPassword(): Promise<string | null> {
     const setting = await prisma.adminSetting.findUnique({

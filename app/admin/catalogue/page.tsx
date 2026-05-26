@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Tag, Loader2, ArrowLeft, Save, ShieldAlert, Check, CheckCircle2, AlertCircle, Eye
+  Tag, Loader2, ArrowLeft, Save, ShieldAlert, Check, CheckCircle2, AlertCircle, Eye, Plus, Edit2, Trash2, X
 } from "lucide-react";
 
 export default function AdminCatalogPage() {
@@ -14,6 +14,24 @@ export default function AdminCatalogPage() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Product Add / Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState<any | null>(null);
+  const [modalName, setModalName] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
+  const [modalUnit, setModalUnit] = useState("");
+  const [modalPrice, setModalPrice] = useState("");
+  const [modalCategory, setModalCategory] = useState("elevage");
+  const [modalIsActive, setModalIsActive] = useState(true);
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalError, setModalError] = useState("");
+
+  // Delete Confirmation State
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
+  const [productToDeleteName, setProductToDeleteName] = useState("");
+  const [deletingProduct, setDeletingProduct] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -69,6 +87,111 @@ export default function AdminCatalogPage() {
     }
   };
 
+  const handleOpenAddModal = (categoryKey: string) => {
+    setModalProduct(null);
+    setModalName("");
+    setModalDescription("");
+    setModalUnit("");
+    setModalPrice("");
+    setModalCategory(categoryKey);
+    setModalIsActive(true);
+    setModalError("");
+    setModalSaving(false);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (prod: any) => {
+    setModalProduct(prod);
+    setModalName(prod.name);
+    setModalDescription(prod.description || "");
+    setModalUnit(prod.unit);
+    setModalPrice(prod.price === null ? "" : String(prod.price));
+    setModalCategory(prod.category);
+    setModalIsActive(prod.isActive);
+    setModalError("");
+    setModalSaving(false);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveModalProduct = async () => {
+    if (!modalName.trim()) {
+      setModalError("Le nom de l'article est obligatoire.");
+      return;
+    }
+    if (!modalUnit.trim()) {
+      setModalError("L'unité de l'article est obligatoire.");
+      return;
+    }
+
+    setModalSaving(true);
+    setModalError("");
+
+    try {
+      const payload = {
+        action: modalProduct ? "update" : "create",
+        id: modalProduct?.id,
+        name: modalName.trim(),
+        description: modalDescription.trim(),
+        category: modalCategory,
+        unit: modalUnit.trim(),
+        price: modalPrice.trim() === "" ? null : Number(modalPrice),
+        isActive: modalIsActive
+      };
+
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(modalProduct ? "Article modifié avec succès" : "Article ajouté avec succès");
+        setTimeout(() => setSuccessMsg(""), 3000);
+        setIsModalOpen(false);
+        await loadProducts();
+      } else {
+        setModalError(data.error || "Une erreur est survenue lors de l'enregistrement.");
+      }
+    } catch (err) {
+      console.error(err);
+      setModalError("Erreur de connexion avec le serveur.");
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (prod: any) => {
+    setProductToDeleteId(prod.id);
+    setProductToDeleteName(prod.name);
+    setDeletingProduct(false);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDeleteId) return;
+    setDeletingProduct(true);
+    try {
+      const res = await fetch(`/api/admin/products?id=${productToDeleteId}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg("Article supprimé avec succès");
+        setTimeout(() => setSuccessMsg(""), 3000);
+        setIsConfirmOpen(false);
+        await loadProducts();
+      } else {
+        alert(data.error || "Erreur lors de la suppression.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erreur de connexion.");
+    } finally {
+      setDeletingProduct(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07130A] flex items-center justify-center font-sans">
@@ -98,7 +221,7 @@ export default function AdminCatalogPage() {
           </button>
           <div>
             <h1 className="font-serif font-bold text-lg leading-tight">Gestion du Catalogue</h1>
-            <p className="text-[10px] text-gray-400 font-sans">Modifie les prix des articles et leur visibilité en direct</p>
+            <p className="text-[10px] text-gray-400 font-sans">Crée, modifie et organise les articles du catalogue en direct</p>
           </div>
         </div>
 
@@ -125,56 +248,88 @@ export default function AdminCatalogPage() {
         
         {categories.map(cat => (
           <div key={cat.key} className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-4">
-            <h2 className="font-serif text-base font-bold border-b border-white/5 pb-2 text-primary-green">{cat.label}</h2>
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <h2 className="font-serif text-base font-bold text-primary-green">{cat.label}</h2>
+              <button
+                onClick={() => handleOpenAddModal(cat.key)}
+                className="px-3 py-1.5 rounded-xl bg-primary-green/10 hover:bg-primary-green hover:text-[#07130A] text-primary-green text-xs font-black inline-flex items-center gap-1.5 border border-primary-green/20 hover:border-primary-green transition-all cursor-pointer shadow-lg"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Ajouter
+              </button>
+            </div>
             
             <div className="divide-y divide-white/5">
-              {products.filter(p => p.category === cat.key).map(prod => (
-                <div key={prod.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-bold text-white leading-tight">{prod.name}</p>
-                    <p className="text-xs text-gray-400 font-sans max-w-md">{prod.description}</p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-mono font-semibold">Unité : {prod.unit}</p>
-                  </div>
-
-                  <div className="flex items-center gap-3 self-end sm:self-auto">
-                    {/* Price Input */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        placeholder="Sur devis"
-                        value={prices[prod.id] || ""}
-                        onChange={(e) => setPrices(prev => ({ ...prev, [prod.id]: e.target.value }))}
-                        className="w-28 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green text-right font-mono"
-                      />
-                      <span className="text-[10px] text-gray-400 font-sans font-bold">FCFA</span>
+              {products.filter(p => p.category === cat.key).length === 0 ? (
+                <p className="text-xs text-gray-500 py-6 text-center italic font-sans">Aucun article dans cette catégorie.</p>
+              ) : (
+                products.filter(p => p.category === cat.key).map(prod => (
+                  <div key={prod.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-bold text-white leading-tight">{prod.name}</p>
+                      {prod.description && <p className="text-xs text-gray-400 font-sans max-w-md">{prod.description}</p>}
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider font-mono font-semibold">Unité : {prod.unit}</p>
                     </div>
 
-                    {/* Active toggle check */}
-                    <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-gray-300 font-bold bg-white/5 px-2.5 py-2 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={status[prod.id] || false}
-                        onChange={(e) => setStatus(prev => ({ ...prev, [prod.id]: e.target.checked }))}
-                        className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
-                      />
-                      Actif
-                    </label>
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                      {/* Price Input */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="Sur devis"
+                          value={prices[prod.id] || ""}
+                          onChange={(e) => setPrices(prev => ({ ...prev, [prod.id]: e.target.value }))}
+                          className="w-28 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green text-right font-mono"
+                        />
+                        <span className="text-[10px] text-gray-400 font-sans font-bold">FCFA</span>
+                      </div>
 
-                    {/* Save Button */}
-                    <button
-                      onClick={() => handleSaveProduct(prod.id)}
-                      disabled={savingId === prod.id}
-                      className="p-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] disabled:opacity-60 transition-colors cursor-pointer"
-                    >
-                      {savingId === prod.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-[#07130A]" />
-                      ) : (
-                        <Save className="w-4 h-4 text-[#07130A]" />
-                      )}
-                    </button>
+                      {/* Active toggle check */}
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-gray-300 font-bold bg-white/5 px-2.5 py-2 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={status[prod.id] || false}
+                          onChange={(e) => setStatus(prev => ({ ...prev, [prod.id]: e.target.checked }))}
+                          className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                        />
+                        Actif
+                      </label>
+
+                      {/* Quick Save Button */}
+                      <button
+                        onClick={() => handleSaveProduct(prod.id)}
+                        disabled={savingId === prod.id}
+                        className="p-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] disabled:opacity-60 transition-colors cursor-pointer border border-primary-green"
+                        title="Sauvegarde rapide du prix & visibilité"
+                      >
+                        {savingId === prod.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-[#07130A]" />
+                        ) : (
+                          <Save className="w-4 h-4 text-[#07130A]" />
+                        )}
+                      </button>
+
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => handleOpenEditModal(prod)}
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 transition-all cursor-pointer"
+                        title="Modifier les détails"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteClick(prod)}
+                        className="p-2 rounded-xl bg-red-950/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-900/30 hover:border-red-500 transition-all cursor-pointer"
+                        title="Supprimer l'article"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         ))}
@@ -188,6 +343,156 @@ export default function AdminCatalogPage() {
           </p>
         </footer>
       </main>
+
+      {/* Add / Edit Product Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0F2214] border border-primary-green/10 rounded-3xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <h3 className="font-serif text-base font-bold text-white">
+                {modalProduct ? "Modifier l'article" : "Ajouter un article"}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {modalError && (
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-900/30 text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {modalError}
+              </div>
+            )}
+
+            <div className="space-y-3.5">
+              {/* Category Select */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Catégorie</label>
+                <select
+                  value={modalCategory}
+                  onChange={(e) => setModalCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green cursor-pointer"
+                >
+                  {categories.map(c => (
+                    <option key={c.key} value={c.key} className="bg-[#07130A]">{c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Name Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Nom de l'article *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Poussins d'1 jour..."
+                  value={modalName}
+                  onChange={(e) => setModalName(e.target.value)}
+                  className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                />
+              </div>
+
+              {/* Description Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Description</label>
+                <textarea
+                  placeholder="Description ou caractéristiques de l'article..."
+                  value={modalDescription}
+                  onChange={(e) => setModalDescription(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green resize-none"
+                />
+              </div>
+
+              {/* Row for Unit & Price */}
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Unité *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: sujet, sac 25kg, lot 10 plants..."
+                    value={modalUnit}
+                    onChange={(e) => setModalUnit(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Prix (FCFA)</label>
+                  <input
+                    type="number"
+                    placeholder="Sur devis"
+                    value={modalPrice}
+                    onChange={(e) => setModalPrice(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green text-right font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300 font-bold bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors w-max">
+                <input
+                  type="checkbox"
+                  checked={modalIsActive}
+                  onChange={(e) => setModalIsActive(e.target.checked)}
+                  className="rounded border-white/20 bg-black/40 text-primary-green focus:ring-0 cursor-pointer"
+                />
+                Actif (Visible sur le site)
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-white/5">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveModalProduct}
+                disabled={modalSaving}
+                className="px-4 py-2 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {modalSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#0F2214] border border-red-950/40 rounded-3xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2.5 text-red-400">
+              <ShieldAlert className="w-5 h-5 shrink-0 animate-pulse" />
+              <h3 className="font-serif text-sm font-bold text-white">Supprimer l'article ?</h3>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed font-sans">
+              Voulez-vous vraiment supprimer définitivement l'article <strong className="text-white">"{productToDeleteName}"</strong> ? Cette opération est irréversible.
+            </p>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setIsConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deletingProduct}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {deletingProduct && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
