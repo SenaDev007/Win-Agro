@@ -64,8 +64,8 @@ export async function POST(request: Request) {
         const { url } = await put(blobName, fileObj, { access: "public" });
         cleanImage = url;
       } else {
-        const imageUrl = (formData.get("image") as string) || "/Logo Win Agro.png";
-        cleanImage = sanitize(imageUrl);
+        const imageUrl = formData.get("image") as string;
+        cleanImage = (imageUrl && imageUrl !== "undefined" && imageUrl !== "null") ? sanitize(imageUrl) : "/Logo Win Agro.png";
       }
 
       cleanText = sanitize(textRaw);
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       id = bid ?? "";
       cleanText = sanitize(text);
       cleanHighlight = sanitize(highlight);
-      cleanImage = sanitize(image) || "/Logo Win Agro.png";
+      cleanImage = (image && image !== "undefined" && image !== "null") ? sanitize(image) : "/Logo Win Agro.png";
       cleanName = sanitize(name);
       cleanRole = sanitize(role);
       cleanIsActive = !!isActive;
