@@ -52,17 +52,19 @@ export async function POST(request: Request) {
       const isActiveRaw = formData.get("isActive");
       cleanIsActive = isActiveRaw === "true";
 
-      const imageFile = formData.get("image") as File | null;
-      if (imageFile && imageFile.size > 0) {
-        if (imageFile.size > 5 * 1024 * 1024) {
+      const imageFile = formData.get("image");
+      const isFile = imageFile && typeof imageFile !== "string" && "size" in imageFile;
+      if (isFile && (imageFile as any).size > 0) {
+        const fileObj = imageFile as File;
+        if (fileObj.size > 5 * 1024 * 1024) {
           return NextResponse.json({ success: false, error: "Image trop volumineuse (max 5 MB)" }, { status: 400 });
         }
-        const ext = imageFile.name.split(".").pop() || "png";
+        const ext = fileObj.name.split(".").pop() || "png";
         const blobName = `testimonials/${uuidv4()}.${ext}`;
-        const { url } = await put(blobName, imageFile, { access: "public" });
+        const { url } = await put(blobName, fileObj, { access: "public" });
         cleanImage = url;
       } else {
-        const imageUrl = (formData.get("image") as string) ?? "/Logo Win Agro.png";
+        const imageUrl = (formData.get("image") as string) || "/Logo Win Agro.png";
         cleanImage = sanitize(imageUrl);
       }
 

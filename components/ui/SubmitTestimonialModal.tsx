@@ -39,7 +39,7 @@ export default function SubmitTestimonialModal({ isOpen, onClose }: SubmitTestim
       formData.append("file", file);
 
       // We upload to our testimonials media handler via Vercel Blob
-      const res = await fetch("/api/admin/testimonials", {
+      const res = await fetch("/api/testimonials/upload", {
         method: "POST",
         body: formData
       });
