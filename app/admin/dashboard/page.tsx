@@ -10,6 +10,24 @@ import {
   SlidersHorizontal, XCircle, Mail
 } from "lucide-react";
 
+function formatWhatsAppNumber(phone: string): string {
+  let cleaned = phone.replace(/[^0-9]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("229")) {
+    return cleaned;
+  }
+  if (cleaned.startsWith("00229")) {
+    return cleaned.substring(2);
+  }
+  if (cleaned.startsWith("0")) {
+    return "229" + cleaned;
+  }
+  if (cleaned.length === 10 || cleaned.length === 8) {
+    return "229" + cleaned;
+  }
+  return cleaned;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
@@ -20,7 +38,7 @@ export default function AdminDashboard() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   
-  const [tab, setTab] = useState<"analytics" | "leads" | "testimonials" | "services" | "stats" | "forms">("analytics");
+  const [tab, setTab] = useState<"analytics" | "leads" | "orders" | "testimonials" | "services" | "stats" | "forms">("analytics");
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -295,6 +313,29 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleDeleteLead = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer le prospect / la commande ?",
+      message: "Voulez-vous vraiment supprimer définitivement ce contact ? Cette opération ne peut pas être annulée.",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/admin/leads?id=${id}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (data.success) {
+            setLeads(prev => prev.filter(l => l.id !== id));
+            setSelectedLead(null);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
   };
 
   const handleUpdateCredentials = async (e: React.FormEvent) => {
@@ -596,6 +637,10 @@ export default function AdminDashboard() {
   const { stats: analyticsStats, dailyTrend, trafficSources, topPages, genders, ageBrackets, locations, isMock } = data || {};
 
   const filteredLeads = leads.filter(lead => {
+    // Exclude catalog orders from standard leads
+    if (lead.type.startsWith("Commande Catalogue")) {
+      return false;
+    }
     // 1. Filter by Form Type (tab selector)
     if (leadFilter !== "all" && !lead.type.toLowerCase().includes(leadFilter.toLowerCase())) {
       return false;
@@ -616,6 +661,44 @@ export default function AdminDashboard() {
       return false;
     }
     // 4. Filter by Date range
+    if (leadDateFilter !== "all") {
+      const leadTime = new Date(lead.date).getTime();
+      const nowTime = Date.now();
+      if (leadDateFilter === "today") {
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        if (leadTime < startOfToday) return false;
+      } else if (leadDateFilter === "week") {
+         const sevenDaysAgo = nowTime - 7 * 24 * 60 * 60 * 1000;
+        if (leadTime < sevenDaysAgo) return false;
+      } else if (leadDateFilter === "month") {
+        const thirtyDaysAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
+        if (leadTime < thirtyDaysAgo) return false;
+      }
+    }
+    return true;
+  });
+
+  const filteredOrders = leads.filter(lead => {
+    // Only include catalog orders
+    if (!lead.type.startsWith("Commande Catalogue")) {
+      return false;
+    }
+    // 1. Filter by Search Query (name, phone, location, details content)
+    if (leadSearchInput.trim()) {
+      const q = leadSearchInput.toLowerCase();
+      const matchName = lead.name?.toLowerCase().includes(q);
+      const matchPhone = lead.phone?.toLowerCase().includes(q);
+      const matchLocation = lead.location?.toLowerCase().includes(q);
+      const matchDetails = JSON.stringify(lead.details || {}).toLowerCase().includes(q);
+      if (!matchName && !matchPhone && !matchLocation && !matchDetails) {
+        return false;
+      }
+    }
+    // 2. Filter by CRM Pipeline Status
+    if (leadStatusFilter !== "all" && lead.status !== leadStatusFilter) {
+      return false;
+    }
+    // 3. Filter by Date range
     if (leadDateFilter !== "all") {
       const leadTime = new Date(lead.date).getTime();
       const nowTime = Date.now();
@@ -804,12 +887,27 @@ export default function AdminDashboard() {
           >
             <Users className="w-4 h-4 text-primary-green" />
             Prospects & Leads
-            {leads.filter(l => l.status === "new").length > 0 && (
+            {leads.filter(l => !l.type.startsWith("Commande Catalogue") && l.status === "new").length > 0 && (
               <span className="w-4 h-4 rounded-full bg-primary-green text-[9px] font-black text-[#07130A] flex items-center justify-center">
-                {leads.filter(l => l.status === "new").length}
+                {leads.filter(l => !l.type.startsWith("Commande Catalogue") && l.status === "new").length}
               </span>
             )}
             {tab === "leads" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("orders")}
+            className={`px-5 py-3 font-serif text-base font-bold relative transition-colors cursor-pointer flex items-center gap-2 ${tab === "orders" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
+          >
+            <Tag className="w-4 h-4 text-primary-green" />
+            Commandes
+            {leads.filter(l => l.type.startsWith("Commande Catalogue") && l.status === "new").length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-primary-green text-[9px] font-black text-[#07130A] flex items-center justify-center">
+                {leads.filter(l => l.type.startsWith("Commande Catalogue") && l.status === "new").length}
+              </span>
+            )}
+            {tab === "orders" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green" />
             )}
           </button>
@@ -1440,6 +1538,185 @@ export default function AdminDashboard() {
               {passError && (
                 <p className="text-red-400 text-[10px] mt-2 font-semibold">⚠️ {passError}</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {tab === "orders" && (
+          <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="font-serif text-lg font-bold">🛒 Gestion des Commandes</h3>
+                <p className="text-xs text-gray-400">Commandes passées via le catalogue de produits Win Agro</p>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="space-y-3 mb-6 pt-4 border-t border-white/5">
+              {/* Row 1: Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={leadSearchInput}
+                  onChange={(e) => setLeadSearchInput(e.target.value)}
+                  placeholder="Rechercher une commande par nom, téléphone, ville, produit…"
+                  className="w-full pl-9 pr-8 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green placeholder-gray-600 font-sans"
+                />
+                {leadSearchInput && (
+                  <button
+                    onClick={() => setLeadSearchInput("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Row 2: Status + Date filters */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                {/* Status pills */}
+                {[
+                  { value: "all",       label: "Tous",         color: "" },
+                  { value: "new",       label: "🔴 Nouveau",   color: "" },
+                  { value: "contacted", label: "🟡 En cours",  color: "" },
+                  { value: "confirmed", label: "🟢 Dispo Confirmée", color: "" },
+                  { value: "abandoned", label: "🟠 Abandonné", color: "" },
+                  { value: "archived",  label: "⚫ Archivé",  color: "" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setLeadStatusFilter(opt.value)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                      leadStatusFilter === opt.value
+                        ? "bg-primary-green text-[#07130A] border-primary-green"
+                        : "bg-white/5 text-gray-400 border-white/10 hover:border-primary-green/40 hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+
+                <div className="flex-1" />
+
+                {/* Date select */}
+                <select
+                  value={leadDateFilter}
+                  onChange={(e) => setLeadDateFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-xl text-[10px] text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans"
+                >
+                  <option value="all">📅 Toutes périodes</option>
+                  <option value="today">Aujourd'hui</option>
+                  <option value="week">7 derniers jours</option>
+                  <option value="month">30 derniers jours</option>
+                </select>
+              </div>
+
+              {/* Count summary */}
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-gray-500">
+                  <span className="font-bold text-white">{filteredOrders.length}</span> commande(s) affichée(s)
+                  {(leadSearchInput || leadStatusFilter !== "all" || leadDateFilter !== "all") && (
+                    <button
+                      onClick={() => { setLeadSearchInput(""); setLeadStatusFilter("all"); setLeadDateFilter("all"); }}
+                      className="ml-2 text-primary-green underline underline-offset-2 hover:text-white transition-colors"
+                    >
+                      Réinitialiser filtres
+                    </button>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-primary-green/20 text-primary-green uppercase tracking-wider font-bold">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Client</th>
+                    <th className="py-3 px-4">Panier d'achat</th>
+                    <th className="py-3 px-4">Localisation</th>
+                    <th className="py-3 px-4">Total Estimé</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500">Aucune commande reçue pour le moment</td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map(lead => {
+                      const detailsEntries = Object.entries(lead.details || {}).filter(([k]) => k !== "Total estimé");
+                      const totalEstim = (lead.details as any)?.["Total estimé"] || "Sur devis";
+                      return (
+                        <tr 
+                          key={lead.id} 
+                          onClick={() => handleSelectLead(lead)}
+                          className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                        >
+                          <td className="py-3 px-4 text-gray-400 font-mono whitespace-nowrap">
+                            {new Date(lead.date).toLocaleDateString("fr-FR")}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div>
+                              <p className="font-bold text-white text-sm group-hover:text-primary-green transition-colors">
+                                {lead.name}
+                              </p>
+                              <span className="text-gray-400 text-[10px] block mt-0.5">{lead.phone}</span>
+                              {lead.email && <span className="text-gray-500 text-[10px] block font-mono">{lead.email}</span>}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="max-w-xs space-y-0.5">
+                              {detailsEntries.map(([prodName, qtyPrice]) => (
+                                <p key={prodName} className="text-[10px] text-gray-300">
+                                  <span className="font-semibold text-gray-400">{prodName}:</span> {String(qtyPrice)}
+                                </p>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-300 font-medium">
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-gray-500" />
+                              {lead.location}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-primary-green font-bold text-sm whitespace-nowrap">
+                            {totalEstim}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-lg font-bold text-[10px] capitalize border ${
+                              lead.status === "new" ? "bg-red-950/40 text-red-400 border-red-900/30" :
+                              lead.status === "abandoned" ? "bg-orange-950/40 text-orange-400 border-orange-900/30 animate-pulse" :
+                              lead.status === "contacted" ? "bg-yellow-950/40 text-yellow-400 border-yellow-900/30" :
+                              lead.status === "confirmed" ? "bg-green-950/40 text-green-400 border-green-900/30" :
+                              "bg-gray-800/40 text-gray-400 border border-gray-700/30"
+                            }`}>
+                              {lead.status === "new" ? "Nouveau" : 
+                               lead.status === "abandoned" ? "Abandonné" : 
+                               lead.status === "contacted" ? "En cours" : 
+                               lead.status === "confirmed" ? "Disponibilité Confirmée" : 
+                               "Archivé"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleSelectLead(lead)}
+                              className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-primary-green hover:text-[#07130A] text-gray-300 font-bold inline-flex items-center gap-1 transition-all text-xs"
+                            >
+                              Gérer la commande
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -2389,12 +2666,21 @@ export default function AdminDashboard() {
                     <p className="text-[10px] text-gray-400 font-mono">{selectedLead.phone}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setSelectedLead(null)}
-                  className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleDeleteLead(selectedLead.id)}
+                    className="p-1.5 rounded-lg bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-950/40 transition-colors cursor-pointer animate-pulse-once"
+                    title="Supprimer ce contact"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => setSelectedLead(null)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* CRM Lead Metadata */}
@@ -2478,6 +2764,7 @@ export default function AdminDashboard() {
                       <option value="new">🔴 Nouveau</option>
                       <option value="abandoned">🟠 Abandonné</option>
                       <option value="contacted">🟡 En discussion</option>
+                      <option value="confirmed">🟢 Dispo Confirmée</option>
                       <option value="won">🟢 Converti (Client ✓)</option>
                       <option value="archived">⚫ Archivé</option>
                     </select>
@@ -2626,16 +2913,20 @@ export default function AdminDashboard() {
             </div>
 
             {/* Smart WhatsApp & Email relances buttons */}
-            <div className="pt-4 border-t border-white/5 bg-[#0F2214] sticky bottom-0 z-10 flex gap-2">
+            <div className="pt-4 border-t border-white/5 bg-[#0F2214] sticky bottom-0 z-10">
               {(() => {
                 const nameParsed = selectedLead.name.split(" ")[0];
-                const cleanPhone = selectedLead.phone.replace(/[^0-9]/g, "");
-                const leadEmail = selectedLead.email || "";
+                const cleanPhone = formatWhatsAppNumber(selectedLead.phone);
+                const leadEmail = leadEmailInput || selectedLead.email || "";
                 const typeClean = selectedLead.type.toLowerCase();
 
                 let waMessage = "";
                 let mailSubject = "";
                 let mailBody = "";
+
+                let waConfirmMessage = "";
+                let mailConfirmSubject = "";
+                let mailConfirmBody = "";
 
                 if (typeClean.includes("projet") || typeClean.includes("accompagnement")) {
                   // Accompagnement
@@ -2685,7 +2976,7 @@ Cordialement,
 Victoire
 Win Agro Agri Tech Solutions`;
                 } else if (typeClean.includes("catalogue") || typeClean.includes("commande")) {
-                  // Commande Catalogue
+                  // Commande Catalogue - Relance standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre panier de commande dans notre catalogue. Je souhaite valider avec vous les quantités, les tarifs du jour et planifier la livraison de vos produits/sujets. Êtes-vous disponible pour confirmer cela ensemble ?`;
                   mailSubject = `🛒 Validation de votre commande de catalogue - Win Agro`;
                   mailBody = `Bonjour ${selectedLead.name},
@@ -2697,6 +2988,23 @@ J'ai bien reçu le récapitulatif de votre commande de catalogue. Afin de vous g
 Je vous invite à me confirmer vos disponibilités pour un bref appel de validation, ou à répondre directement à ce mail.
 
 En vous remerciant pour votre confiance.
+
+Bien cordialement,
+Victoire
+Win Agro Agri Tech Solutions`;
+
+                  // Commande Catalogue - Confirmation officielle de disponibilité
+                  const orderItems = Object.entries(selectedLead.details || {}).filter(([k]) => k !== "Total estimé").map(([k, v]) => `- ${k} : ${v}`).join("\n");
+                  waConfirmMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Je vous confirme la disponibilité des produits de votre commande catalogue : \n${orderItems}\n\nTout est prêt pour la livraison. Quand seriez-vous disponible pour la recevoir ? Merci à vous, en attendant votre réponse.`;
+                  mailConfirmSubject = `🌱 Confirmation de disponibilité de votre commande - Win Agro`;
+                  mailConfirmBody = `Bonjour ${selectedLead.name},
+
+Nous vous remercions pour votre confiance et nous avons le plaisir de vous confirmer la disponibilité de l'ensemble des articles de votre commande catalogue :
+${orderItems}
+
+Afin de planifier la livraison de votre commande ou d'organiser son retrait dans nos locaux, nous vous invitons à nous préciser vos disponibilités par retour de mail ou par WhatsApp.
+
+Merci à vous, en attendant votre réponse.
 
 Bien cordialement,
 Victoire
@@ -2720,29 +3028,74 @@ Victoire
 Win Agro Agri Tech Solutions`;
                 }
 
+                const isOrder = typeClean.includes("catalogue") || typeClean.includes("commande");
+
+                const handleConfirmAvailability = async () => {
+                  await handleUpdateLeadStatus(selectedLead.id, "confirmed");
+                };
+
                 return (
-                  <>
-                    <a
-                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
-                    >
-                      <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
-                      </svg>
-                      Relancer WhatsApp
-                    </a>
-                    {leadEmail && (
+                  <div className="flex flex-col gap-2 w-full">
+                    {isOrder && (
+                      <div className="p-3.5 bg-green-950/20 border border-green-900/30 rounded-2xl space-y-2 mb-1 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Actions Disponibilité</span>
+                          <span className="text-[9px] text-gray-500 font-mono">Confirmer &amp; Envoyer</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <a
+                            href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waConfirmMessage)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={handleConfirmAvailability}
+                            className="flex-1 py-2.5 px-2 rounded-xl bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-green-800/40 hover:border-primary-green shadow-xl transition-all text-xs"
+                          >
+                            <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
+                            </svg>
+                            Confirm Dispo (WA)
+                          </a>
+                          {leadEmail && (
+                            <a
+                              href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailConfirmSubject)}&body=${encodeURIComponent(mailConfirmBody)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={handleConfirmAvailability}
+                              className="flex-1 py-2.5 px-2 rounded-xl bg-green-900/40 hover:bg-primary-green text-green-300 hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-green-800/40 hover:border-primary-green shadow-xl transition-all text-xs"
+                            >
+                              <Mail className="w-3.5 h-3.5 shrink-0" />
+                              Confirm Dispo (Email)
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
                       <a
-                        href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`}
+                        href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`}
+                        target="_blank"
+                        rel="noreferrer"
                         className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
                       >
-                        <Mail className="w-4 h-4 shrink-0" />
-                        Relancer par Email
+                        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.733-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.528 2.017 14.077 1 11.52 1 6.082 1 1.657 5.37 1.653 10.801c-.001 1.737.478 3.436 1.388 4.935L2.03 21.03l5.097-1.336zM18.66 14.86c-.512-.258-3.033-1.493-3.501-1.662-.468-.17-.81-.256-1.15.257-.34.513-1.32 1.662-1.618 2.003-.298.34-.595.383-1.107.127-.513-.257-2.165-.796-4.124-2.54-1.524-1.357-2.553-3.034-2.851-3.547-.298-.513-.032-.79.224-1.046.23-.23.512-.596.766-.893.255-.298.34-.51.51-.85.17-.34.085-.637-.043-.893-.127-.257-1.15-2.766-1.574-3.786-.413-.997-.833-.861-1.15-.877-.297-.015-.638-.016-.979-.016-.34 0-.894.127-1.362.637-.468.51-1.787 1.744-1.787 4.254 0 2.51 1.83 4.935 2.085 5.276.255.341 3.6 5.49 8.72 7.705 1.218.527 2.17.84 2.912 1.077 1.224.387 2.34.333 3.22.202.982-.146 3.033-1.237 3.46-2.433.427-1.196.427-2.22.298-2.434-.127-.213-.467-.34-.98-.598z" />
+                        </svg>
+                        Relancer WhatsApp
                       </a>
-                    )}
-                  </>
+                      {leadEmail && (
+                        <a
+                          href={`mailto:${leadEmail}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 py-3 px-2 rounded-xl bg-white/5 hover:bg-primary-green text-white hover:text-[#07130A] font-black inline-flex items-center justify-center gap-1.5 border border-white/10 hover:border-primary-green shadow-xl transition-all text-xs"
+                        >
+                          <Mail className="w-4 h-4 shrink-0" />
+                          Relancer par Email
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 );
               })()}
             </div>

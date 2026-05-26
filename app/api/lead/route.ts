@@ -13,6 +13,24 @@ function sanitize(str: any): string {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
 }
 
+function formatWhatsAppNumber(phone: string): string {
+  let cleaned = phone.replace(/[^0-9]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("229")) {
+    return cleaned;
+  }
+  if (cleaned.startsWith("00229")) {
+    return cleaned.substring(2);
+  }
+  if (cleaned.startsWith("0")) {
+    return "229" + cleaned;
+  }
+  if (cleaned.length === 10 || cleaned.length === 8) {
+    return "229" + cleaned;
+  }
+  return cleaned;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -191,7 +209,7 @@ Voici mes coordonnées :
                     <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
                       <a href="tel:${cleanWhatsapp}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanWhatsapp}</a>
                       | 
-                      <a href="https://wa.me/${cleanWhatsapp.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                      <a href="https://wa.me/${formatWhatsAppNumber(cleanWhatsapp)}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
                     </td>
                   </tr>
                   <tr>
@@ -297,7 +315,7 @@ Voici mes coordonnées :
                   <td style="padding: 8px; border-bottom: 1px solid #E6F4EC;">
                     <a href="tel:${cleanPhone}" style="color: #098947; font-weight: bold; text-decoration: none;">${cleanPhone}</a>
                     | 
-                    <a href="https://wa.me/${cleanPhone.replace(/[^0-9]/g, "")}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
+                    <a href="https://wa.me/${formatWhatsAppNumber(cleanPhone)}" style="color: #098947; font-weight: bold; text-decoration: none;">Discuter sur WhatsApp</a>
                   </td>
                 </tr>
                 <tr>

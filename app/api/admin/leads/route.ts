@@ -57,3 +57,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ success: false, error: "ID requis" }, { status: 400 });
+    }
+
+    await prisma.lead.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("❌ Error deleting lead:", error);
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
+  }
+}
