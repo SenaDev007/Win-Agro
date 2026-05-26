@@ -6,7 +6,8 @@ import {
   BarChart3, Users, Clock, Percent, AlertCircle, Phone, MapPin, 
   Tag, Loader2, LogOut, CheckCircle2, ChevronRight, Eye, RefreshCw,
   MessageSquare, Briefcase, Plus, Trash2, Edit2, Check, X, ShieldAlert, Sparkles,
-  Calendar, ArrowUpRight, TrendingUp
+  Calendar, ArrowUpRight, TrendingUp, Search, Bell, BellRing, Send, Filter,
+  SlidersHorizontal, XCircle
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -29,6 +30,12 @@ export default function AdminDashboard() {
 
   // Lead Filter State
   const [leadFilter, setLeadFilter] = useState<string>("all");
+  const [leadSearchInput, setLeadSearchInput] = useState("");
+  const [leadStatusFilter, setLeadStatusFilter] = useState("all");
+  const [leadDateFilter, setLeadDateFilter] = useState("all"); // 'all', 'today', 'week', 'month'
+  
+  // Multiple Notes System States
+  const [newNoteText, setNewNoteText] = useState("");
 
   // Selected Lead Drawer State
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
@@ -181,8 +188,54 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveLeadCRM = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddCRMComment = async () => {
+    if (!selectedLead || !newNoteText.trim()) return;
+    
+    // Parse existing comments (JSON array) or legacy text
+    let existingComments: any[] = [];
+    if (selectedLead.notes) {
+      try {
+        existingComments = JSON.parse(selectedLead.notes);
+        if (!Array.isArray(existingComments)) existingComments = [];
+      } catch {
+        // Legacy plain text → convert to first entry
+        existingComments = [{ ts: selectedLead.date || new Date().toISOString(), text: selectedLead.notes, author: "Conseiller" }];
+      }
+    }
+
+    const newEntry = {
+      ts: new Date().toISOString(),
+      text: newNoteText.trim(),
+      author: "Conseiller"
+    };
+    const updatedComments = [...existingComments, newEntry];
+    const updatedNotes = JSON.stringify(updatedComments);
+
+    setCrmSaving(true);
+    try {
+      const res = await fetch("/api/admin/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          notes: updatedNotes
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setLeads(prev => prev.map(l => l.id === selectedLead.id ? { ...l, notes: updatedNotes } : l));
+        setSelectedLead((prev: any) => ({ ...prev, notes: updatedNotes }));
+        setLeadNotesInput(updatedNotes);
+        setNewNoteText("");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCrmSaving(false);
+    }
+  };
+
+  const handleSaveLeadCRM = async () => {
     if (!selectedLead) return;
     setCrmSaving(true);
     try {
@@ -538,8 +591,41 @@ export default function AdminDashboard() {
   const { stats: analyticsStats, dailyTrend, trafficSources, topPages, genders, ageBrackets, locations, isMock } = data || {};
 
   const filteredLeads = leads.filter(lead => {
-    if (leadFilter === "all") return true;
-    return lead.type.toLowerCase().includes(leadFilter.toLowerCase());
+    // 1. Filter by Form Type (tab selector)
+    if (leadFilter !== "all" && !lead.type.toLowerCase().includes(leadFilter.toLowerCase())) {
+      return false;
+    }
+    // 2. Filter by Search Query (name, phone, location, details content)
+    if (leadSearchInput.trim()) {
+      const q = leadSearchInput.toLowerCase();
+      const matchName = lead.name?.toLowerCase().includes(q);
+      const matchPhone = lead.phone?.toLowerCase().includes(q);
+      const matchLocation = lead.location?.toLowerCase().includes(q);
+      const matchDetails = JSON.stringify(lead.details || {}).toLowerCase().includes(q);
+      if (!matchName && !matchPhone && !matchLocation && !matchDetails) {
+        return false;
+      }
+    }
+    // 3. Filter by CRM Pipeline Status
+    if (leadStatusFilter !== "all" && lead.status !== leadStatusFilter) {
+      return false;
+    }
+    // 4. Filter by Date range
+    if (leadDateFilter !== "all") {
+      const leadTime = new Date(lead.date).getTime();
+      const nowTime = Date.now();
+      if (leadDateFilter === "today") {
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        if (leadTime < startOfToday) return false;
+      } else if (leadDateFilter === "week") {
+        const sevenDaysAgo = nowTime - 7 * 24 * 60 * 60 * 1000;
+        if (leadTime < sevenDaysAgo) return false;
+      } else if (leadDateFilter === "month") {
+        const thirtyDaysAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
+        if (leadTime < thirtyDaysAgo) return false;
+      }
+    }
+    return true;
   });
 
   // Dynamic Forms CRUD Handlers
@@ -1111,6 +1197,98 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* ── Filter Bar ── */}
+            <div className="space-y-3 mb-6 pt-4 border-t border-white/5">
+              {/* Row 1: Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={leadSearchInput}
+                  onChange={(e) => setLeadSearchInput(e.target.value)}
+                  placeholder="Rechercher par nom, téléphone, ville, email…"
+                  className="w-full pl-9 pr-8 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-green placeholder-gray-600"
+                />
+                {leadSearchInput && (
+                  <button
+                    onClick={() => setLeadSearchInput("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Row 2: Status + Date filters */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                {/* Status pills */}
+                {[
+                  { value: "all",       label: "Tous",         color: "" },
+                  { value: "new",       label: "🔴 Nouveau",   color: "" },
+                  { value: "abandoned", label: "🟠 Abandonné", color: "" },
+                  { value: "contacted", label: "🟡 Contacté",  color: "" },
+                  { value: "won",       label: "🟢 Converti",  color: "" },
+                  { value: "archived",  label: "⚫ Archivé",  color: "" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setLeadStatusFilter(opt.value)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                      leadStatusFilter === opt.value
+                        ? "bg-primary-green text-[#07130A] border-primary-green"
+                        : "bg-white/5 text-gray-400 border-white/10 hover:border-primary-green/40 hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+
+                <div className="flex-1" />
+
+                {/* Date select */}
+                <select
+                  value={leadDateFilter}
+                  onChange={(e) => setLeadDateFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-black/40 border border-white/10 rounded-xl text-[10px] text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans"
+                >
+                  <option value="all">📅 Toutes périodes</option>
+                  <option value="today">Aujourd'hui</option>
+                  <option value="week">7 derniers jours</option>
+                  <option value="month">30 derniers jours</option>
+                </select>
+              </div>
+
+              {/* Résumé des filtres actifs + alertes rappels urgents */}
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-gray-500">
+                  <span className="font-bold text-white">{filteredLeads.length}</span> lead(s) affiché(s)
+                  {(leadSearchInput || leadStatusFilter !== "all" || leadDateFilter !== "all") && (
+                    <button
+                      onClick={() => { setLeadSearchInput(""); setLeadStatusFilter("all"); setLeadDateFilter("all"); }}
+                      className="ml-2 text-primary-green underline underline-offset-2 hover:text-white transition-colors"
+                    >
+                      Réinitialiser filtres
+                    </button>
+                  )}
+                </p>
+                {(() => {
+                  const urgentCount = leads.filter(l => {
+                    if (!l.reminderDate) return false;
+                    if (l.status === "won" || l.status === "archived") return false;
+                    return new Date(l.reminderDate).setHours(0,0,0,0) <= new Date().setHours(0,0,0,0);
+                  }).length;
+                  if (urgentCount === 0) return null;
+                  return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/60 border border-red-900/40 rounded-full animate-pulse">
+                      <BellRing className="w-3 h-3 text-red-400" />
+                      <span className="text-[10px] font-black text-red-400">{urgentCount} rappel{urgentCount > 1 ? "s" : ""} urgent{urgentCount > 1 ? "s" : ""} en attente !</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs">
                 <thead>
@@ -1140,8 +1318,28 @@ export default function AdminDashboard() {
                           {new Date(lead.date).toLocaleDateString("fr-FR")}
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-bold text-white text-sm group-hover:text-primary-green transition-colors">{lead.name}</p>
-                          <span className="text-gray-400 text-[10px] block mt-0.5">{lead.phone}</span>
+                          <div className="flex items-start gap-2">
+                            <div>
+                              <p className="font-bold text-white text-sm group-hover:text-primary-green transition-colors flex items-center gap-1.5">
+                                {lead.name}
+                                {(() => {
+                                  if (!lead.reminderDate) return null;
+                                  const reminderTime = new Date(lead.reminderDate).setHours(0, 0, 0, 0);
+                                  const todayTime = new Date().setHours(0, 0, 0, 0);
+                                  const isDue = reminderTime <= todayTime;
+                                  if (isDue && lead.status !== "won" && lead.status !== "archived") {
+                                    return (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black bg-red-950 text-red-400 border border-red-900/30 animate-pulse uppercase tracking-wider" title="Rappel de relance urgent !">
+                                        Rappel Dû
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </p>
+                              <span className="text-gray-400 text-[10px] block mt-0.5">{lead.phone}</span>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
@@ -2248,55 +2446,127 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* Interactive CRM Form Settings */}
-              <form onSubmit={handleSaveLeadCRM} className="space-y-3.5 mt-4 pt-2 border-t border-white/5">
+              {/* ── Interactive CRM Form Settings ── */}
+              <div className="space-y-3.5 mt-4 pt-2 border-t border-white/5">
+
+                {/* Pipeline status + Rappel date */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-gray-400 font-semibold">Statut du pipeline</label>
+                    <label className="text-gray-400 font-semibold text-[10px] uppercase tracking-wider block">Statut pipeline</label>
                     <select
                       value={leadStatusInput}
                       onChange={(e) => setLeadStatusInput(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#0F2214] border border-white/10 rounded-xl text-white font-bold focus:outline-none focus:ring-1 focus:ring-primary-green"
+                      className="w-full px-3 py-2 bg-[#0F2214] border border-white/10 rounded-xl text-white font-bold text-xs focus:outline-none focus:ring-1 focus:ring-primary-green"
                     >
-                      <option value="new">Nouveau (Non contacté)</option>
-                      <option value="abandoned">Abandonné (Saisie partielle)</option>
-                      <option value="contacted">En discussion (Contacté)</option>
-                      <option value="won">Converti (Client gagné ✓)</option>
-                      <option value="archived">Archivé (Perdu / Fermé)</option>
+                      <option value="new">🔴 Nouveau</option>
+                      <option value="abandoned">🟠 Abandonné</option>
+                      <option value="contacted">🟡 En discussion</option>
+                      <option value="won">🟢 Converti (Client ✓)</option>
+                      <option value="archived">⚫ Archivé</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-gray-400 font-semibold inline-flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-primary-green" /> Rappel relance
+                    <label className="text-gray-400 font-semibold text-[10px] uppercase tracking-wider inline-flex items-center gap-1">
+                      <Bell className="w-3 h-3 text-primary-green" /> Rappel relance
                     </label>
                     <input
                       type="date"
                       value={leadReminderInput}
                       onChange={(e) => setLeadReminderInput(e.target.value)}
-                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono"
+                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-mono text-xs"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-gray-400 font-semibold">Notes d'accompagnement & commentaires</label>
-                  <textarea
-                    rows={4}
-                    value={leadNotesInput}
-                    onChange={(e) => setLeadNotesInput(e.target.value)}
-                    placeholder="Saisissez des notes sur le profil, le budget du projet, les dates de formation ou de livraison..."
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-primary-green font-sans leading-relaxed"
-                  />
-                </div>
-
+                {/* Bouton Enregistrer Statut/Rappel */}
                 <button
-                  type="submit"
+                  onClick={handleSaveLeadCRM as any}
                   disabled={crmSaving}
-                  className="w-full py-2.5 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] font-black text-center shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 rounded-xl bg-white/10 hover:bg-primary-green hover:text-[#07130A] text-white font-bold text-xs text-center shadow transition-all cursor-pointer disabled:opacity-50 border border-white/10"
                 >
-                  {crmSaving ? "Enregistrement CRM..." : "Enregistrer les modifications"}
+                  {crmSaving ? "Enregistrement…" : "✓ Sauvegarder le statut & rappel"}
                 </button>
-              </form>
+
+                {/* ── Journal des commentaires ── */}
+                <div className="space-y-2 border-t border-white/5 pt-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-gray-300 font-bold text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-primary-green" />
+                      Journal de suivi
+                    </label>
+                    {(() => {
+                      let count = 0;
+                      if (selectedLead.notes) {
+                        try { count = JSON.parse(selectedLead.notes).length; } catch { count = selectedLead.notes.split("\n").filter(Boolean).length; }
+                      }
+                      return count > 0 ? <span className="text-[9px] bg-primary-green/20 text-primary-green px-2 py-0.5 rounded-full font-bold">{count} note{count > 1 ? "s" : ""}</span> : null;
+                    })()}
+                  </div>
+
+                  {/* Comments list */}
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 max-h-52 overflow-y-auto space-y-2.5">
+                    {(() => {
+                      if (!selectedLead.notes) {
+                        return <p className="text-gray-500 italic py-3 text-center text-[10px]">Aucun commentaire de suivi pour le moment.<br/>Commencez par ajouter une note ci-dessous.</p>;
+                      }
+                      let comments: any[] = [];
+                      try {
+                        const parsed = JSON.parse(selectedLead.notes);
+                        comments = Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        // Legacy plain text: convert to single entry
+                        comments = selectedLead.notes.split("\n").filter(Boolean).map((line: string) => {
+                          const m = line.match(/^\[(.*?)\]\s*(.*)$/);
+                          if (m) return { ts: null, displayDate: m[1], text: m[2], author: "Conseiller" };
+                          return { ts: null, displayDate: null, text: line, author: "Conseiller" };
+                        });
+                      }
+                      if (comments.length === 0) {
+                        return <p className="text-gray-500 italic py-3 text-center text-[10px]">Aucun commentaire.</p>;
+                      }
+                      return comments.map((c: any, idx: number) => {
+                        const dateDisplay = c.displayDate ||
+                          (c.ts ? new Date(c.ts).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
+                        return (
+                          <div key={idx} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-[10px]">
+                            <div className="flex items-center justify-between mb-1.5 gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-4 h-4 rounded-full bg-primary-green/20 flex items-center justify-center text-[8px] font-black text-primary-green">
+                                  {(c.author || "C").charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-bold text-primary-green">{c.author || "Conseiller"}</span>
+                              </div>
+                              {dateDisplay && <span className="font-mono text-gray-500 text-[9px] shrink-0">{dateDisplay}</span>}
+                            </div>
+                            <p className="text-gray-200 leading-relaxed font-sans pl-5">{c.text}</p>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Add comment input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddCRMComment(); } }}
+                      placeholder="Appel sans réponse · Email envoyé · RDV fixé…"
+                      className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-[10px] text-white focus:outline-none focus:ring-1 focus:ring-primary-green placeholder-gray-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCRMComment}
+                      disabled={crmSaving || !newNoteText.trim()}
+                      className="px-3 py-2 bg-primary-green text-[#07130A] font-bold rounded-xl text-[10px] transition-all disabled:opacity-40 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Send className="w-3 h-3" />
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               {/* Visitor session timeline navigation history */}
               <div className="mt-5 pt-4 border-t border-white/5 space-y-3">
