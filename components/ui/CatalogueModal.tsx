@@ -165,6 +165,7 @@ interface CatalogueModalProps {
 export default function CatalogueModal({ isOpen, onClose, categoryKey }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [dynamicProducts, setDynamicProducts] = useState<any[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [step, setStep] = useState<"list" | "checkout">("list");
   const [form, setForm] = useState<Record<string, string>>({
     prenom: "", nom: "", whatsapp: "", email: "", ville: ""
@@ -175,6 +176,7 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
   // Fetch updated catalog products from the admin store dynamically
   useEffect(() => {
     if (isOpen) {
+      setProductsLoading(true);
       fetch("/api/admin/products")
         .then((res) => res.json())
         .then((resData) => {
@@ -182,31 +184,39 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
             setDynamicProducts(resData.products);
           }
         })
-        .catch((err) => console.error("❌ Failed to fetch current catalog prices:", err));
+        .catch((err) => console.error("❌ Failed to fetch current catalog prices:", err))
+        .finally(() => setProductsLoading(false));
     }
   }, [isOpen]);
 
   const rawCategory = catalogueData.find(c => c.key === categoryKey) ?? null;
 
-  // Merge static metadata with dynamic price and status variables
+  // Merge static metadata with dynamic price and status variables from the database
   const category = React.useMemo(() => {
     if (!rawCategory) return null;
     
-    // Map dynamically updated values from memory store if loaded
-    const mappedProducts = rawCategory.products.map(p => {
-      const dbProduct = dynamicProducts.find(dp => dp.id === p.id);
-      return {
-        ...p,
-        price: dbProduct ? dbProduct.price : p.price,
-        isActive: dbProduct ? dbProduct.isActive : true
-      };
-    }).filter(p => p.isActive);
+    // If we have fetched products from the database, use those for this category.
+    // Otherwise fall back to the static catalogue array as a loading preview.
+    const sourceProducts = dynamicProducts.length > 0
+      ? dynamicProducts.filter((dp: any) => dp.category === categoryKey)
+      : rawCategory.products.map(p => ({ ...p, isActive: true }));
+
+    const mappedProducts = sourceProducts
+      .filter((p: any) => p.isActive)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || "",
+        price: p.price,
+        unit: p.unit.startsWith("FCFA") ? p.unit : `FCFA / ${p.unit}`,
+        isActive: p.isActive
+      }));
 
     return {
       ...rawCategory,
       products: mappedProducts
     };
-  }, [rawCategory, dynamicProducts]);
+  }, [rawCategory, dynamicProducts, categoryKey]);
 
   // Reset cart and step when category changes
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Bird, Wheat, Trees, ChevronRight } from "lucide-react";
 import CatalogueModal from "@/components/ui/CatalogueModal";
@@ -8,6 +8,28 @@ import CatalogueModal from "@/components/ui/CatalogueModal";
 export default function Products() {
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({
+    elevage: 7,
+    nutrition: 5,
+    agriculture: 4
+  });
+
+  useEffect(() => {
+    fetch("/api/admin/products")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.products) {
+          const countsMap: Record<string, number> = { elevage: 0, nutrition: 0, agriculture: 0 };
+          data.products.forEach((p: any) => {
+            if (p.isActive) {
+              countsMap[p.category] = (countsMap[p.category] || 0) + 1;
+            }
+          });
+          setCounts(countsMap);
+        }
+      })
+      .catch(err => console.error("Error loading products for counts:", err));
+  }, []);
 
   const handleCardClick = (key: string) => {
     setOpenCategoryKey(key);
@@ -31,7 +53,7 @@ export default function Products() {
         "Lapins reproducteurs de races sélectionnées ou pour la chair",
         "Volailles prêtes à consommer — Œufs de table frais",
       ],
-      badge: "7 articles",
+      badge: `${counts["elevage"] || 0} article${counts["elevage"] !== 1 ? "s" : ""}`,
     },
     {
       key: "nutrition",
@@ -44,7 +66,7 @@ export default function Products() {
         "Provende pondeuse enrichie en calcium",
         "Formulation personnalisée sur mesure (avec consultation incluse)",
       ],
-      badge: "5 articles",
+      badge: `${counts["nutrition"] || 0} article${counts["nutrition"] !== 1 ? "s" : ""}`,
     },
     {
       key: "agriculture",
@@ -56,7 +78,7 @@ export default function Products() {
         "Autres espèces de plants agricoles sélectionnés pour nos sols",
         "Disponibilité saisonnière et accompagnement à la mise en terre",
       ],
-      badge: "4 articles",
+      badge: `${counts["agriculture"] || 0} article${counts["agriculture"] !== 1 ? "s" : ""}`,
     },
   ];
 
