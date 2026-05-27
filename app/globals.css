@@ -18,6 +18,8 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-subtle-spin: subtle-spin 20s linear infinite;
   --animate-marquee: marquee 60s linear infinite;
+  --animate-marquee-left: marquee-left 35s linear infinite;
+  --animate-marquee-right: marquee-right 35s linear infinite;
 
   @keyframes pulse-slow {
     0%, 100% {
@@ -64,6 +66,22 @@
     }
     100% {
       transform: translateX(-50%);
+    }
+  }
+  @keyframes marquee-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-33.3333%);
+    }
+  }
+  @keyframes marquee-right {
+    0% {
+      transform: translateX(-33.3333%);
+    }
+    100% {
+      transform: translateX(0);
     }
   }
 }

@@ -94,50 +94,17 @@ const AudioPlayer = ({ src }: { src: string }) => {
 
 export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
   testimonials,
-  speed = 20,
+  speed = 35,
   direction = "left",
   cardHeight = 220,
   className,
 }) => {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const [carouselWidth, setCarouselWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (innerRef.current) {
-        setCarouselWidth(innerRef.current.scrollWidth / 3);
-      }
-    };
-
-    handleResize();
-
-    const timer = setTimeout(handleResize, 100);
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [testimonials]);
-
   const loopTestimonials = [...testimonials, ...testimonials, ...testimonials];
 
   return (
     <div className={`overflow-hidden w-full ${className}`}>
-      <motion.div
-        ref={innerRef}
-        animate={{
-          x:
-            direction === "left"
-              ? [0, -carouselWidth]
-              : [-carouselWidth, 0],
-        }}
-        transition={{
-          duration: speed,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        className="flex gap-6 w-max"
+      <div
+        className={`flex gap-6 w-max ${direction === "left" ? "animate-marquee-left" : "animate-marquee-right"} hover:[animation-play-state:paused] pointer-events-auto`}
       >
         {loopTestimonials.map(({ text, highlight, image, name, role, audioUrl }, index) => (
           <motion.div
@@ -178,7 +145,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
             </div>
           </motion.div>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 };
