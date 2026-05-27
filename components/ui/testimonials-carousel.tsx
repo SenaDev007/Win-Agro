@@ -52,26 +52,32 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
     }, 2500);
   };
 
-  // Sync HTMLAudioElement state with React state
-  useEffect(() => {
+  const handleCardPlayToggle = (url: string) => {
     if (!audioRef.current) return;
-    if (activeUrl) {
-      if (audioRef.current.src !== activeUrl) {
-        audioRef.current.src = activeUrl;
-        audioRef.current.load();
-      }
+
+    if (activeUrl === url) {
       if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
         audioRef.current.play().catch(err => {
           console.error("Audio playback error:", err);
           setIsPlaying(false);
         });
-      } else {
-        audioRef.current.pause();
+        setIsPlaying(true);
       }
     } else {
-      audioRef.current.pause();
+      audioRef.current.src = url;
+      audioRef.current.load();
+      audioRef.current.play().catch(err => {
+        console.error("Audio playback error:", err);
+        setIsPlaying(false);
+      });
+      setActiveUrl(url);
+      setIsPlaying(true);
+      setProgress(0);
     }
-  }, [activeUrl, isPlaying]);
+  };
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -84,16 +90,6 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
     setIsPlaying(false);
     setProgress(0);
     setActiveUrl(null);
-  };
-
-  const handleCardPlayToggle = (url: string) => {
-    if (activeUrl === url) {
-      setIsPlaying(!isPlaying);
-    } else {
-      setActiveUrl(url);
-      setIsPlaying(true);
-      setProgress(0);
-    }
   };
 
   useEffect(() => {
