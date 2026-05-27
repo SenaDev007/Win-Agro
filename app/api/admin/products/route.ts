@@ -13,7 +13,7 @@ export async function GET() {
       const until = await localStore.getSetting(`category_discount_until_${cat}`);
       if (percentage && until && new Date(until) > new Date()) {
         discounts[cat] = {
-          percentage: Number(percentage),
+          percentage: Math.abs(Number(percentage)),
           until: until
         };
       } else {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       if (discountPercentage === null || discountPercentage === undefined) {
         await localStore.deleteSetting(percentageKey);
       } else {
-        await localStore.setSetting(percentageKey, String(discountPercentage));
+        await localStore.setSetting(percentageKey, String(Math.abs(Number(discountPercentage))));
       }
 
       if (discountUntil === null || discountUntil === undefined) {
