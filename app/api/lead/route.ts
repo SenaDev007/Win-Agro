@@ -109,13 +109,53 @@ export async function POST(request: Request) {
           const dbProducts = await prisma.product.findMany({
             where: { id: { in: productIds } }
           });
+
+          // Load category discounts to match client side
+          const categories = ["elevage", "nutrition", "agriculture"];
+          const discounts: Record<string, { percentage: number; until: string | null } | null> = {};
+          for (const cat of categories) {
+            const percentage = await localStore.getSetting(`category_discount_percentage_${cat}`);
+            const until = await localStore.getSetting(`category_discount_until_${cat}`);
+            if (percentage && until && new Date(until) > new Date()) {
+              discounts[cat] = {
+                percentage: Math.abs(Number(percentage)),
+                until: until
+              };
+            } else {
+              discounts[cat] = null;
+            }
+          }
+
           let total = 0;
           dbProducts.forEach(p => {
             const qty = Number(body[p.id]);
             if (qty > 0) {
-              const priceText = p.price ? `${qty} × ${p.price.toLocaleString("fr-FR")} FCFA = ${(p.price * qty).toLocaleString("fr-FR")} FCFA` : `${qty} × Sur devis`;
+              let activePrice = p.price;
+              let isPromo = false;
+
+              if (p.price !== null) {
+                // Check if individual product promotion is active
+                const individualPromoActive = p.promoPrice !== null && p.promoPrice !== undefined && p.promoUntil && new Date(p.promoUntil) > new Date();
+                
+                if (individualPromoActive) {
+                  activePrice = p.promoPrice;
+                  isPromo = true;
+                } else {
+                  // Check if global category-level discount is active
+                  const catDiscount = discounts[p.category];
+                  const catPromoActive = catDiscount && catDiscount.percentage > 0 && catDiscount.until && new Date(catDiscount.until) > new Date();
+                  if (catPromoActive) {
+                    activePrice = Math.round(p.price * (1 - catDiscount.percentage / 100));
+                    isPromo = true;
+                  }
+                }
+              }
+
+              const priceText = activePrice !== null 
+                ? `${qty} × ${activePrice.toLocaleString("fr-FR")} FCFA = ${(activePrice * qty).toLocaleString("fr-FR")} FCFA${isPromo ? " (PROMO)" : ""}` 
+                : `${qty} × Sur devis`;
               detailsObj[p.name] = priceText;
-              if (p.price) total += p.price * qty;
+              if (activePrice !== null) total += activePrice * qty;
             }
           });
           detailsObj["Total estimé"] = `${total.toLocaleString("fr-FR")} FCFA`;
