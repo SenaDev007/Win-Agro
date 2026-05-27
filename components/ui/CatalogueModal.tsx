@@ -161,18 +161,21 @@ function ProductCard({
   qty,
   onAdd,
   onRemove,
+  isHighlighted = false,
 }: {
   product: CatalogueProduct;
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
+  isHighlighted?: boolean;
 }) {
   const promoActive = isPromoActive(product);
 
   return (
     <motion.div
       layout
-      className={`bg-white rounded-2xl border p-4 flex flex-col gap-3 shadow-sm transition-all duration-200 ${qty > 0 ? "border-primary-green/50 ring-1 ring-primary-green/20" : "border-gray-100"}`}
+      id={`prod-card-${product.id}`}
+      className={`bg-white rounded-2xl border p-4 flex flex-col gap-3 shadow-sm transition-all duration-300 ${isHighlighted ? "border-amber-400 ring-2 ring-amber-400/35 bg-amber-500/[0.01] shadow-md" : (qty > 0 ? "border-primary-green/50 ring-1 ring-primary-green/20" : "border-gray-100")}`}
     >
       <div className="flex-1">
         <p className="font-serif font-bold text-primary-deep text-sm leading-snug">{product.name}</p>
@@ -236,9 +239,10 @@ interface CatalogueModalProps {
   categoryKey: string | null;
   products?: any[];
   discounts?: Record<string, any>;
+  initialProductId?: string | null;
 }
 
-export default function CatalogueModal({ isOpen, onClose, categoryKey, products: propProducts, discounts: propDiscounts }: CatalogueModalProps) {
+export default function CatalogueModal({ isOpen, onClose, categoryKey, products: propProducts, discounts: propDiscounts, initialProductId = null }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [localProducts, setLocalProducts] = useState<any[]>([]);
   const [localDiscounts, setLocalDiscounts] = useState<Record<string, any>>({});
@@ -348,6 +352,19 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Scroll to and highlight specific shared product on mount
+  useEffect(() => {
+    if (isOpen && initialProductId && step === "list") {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`prod-card-${initialProductId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, initialProductId, step]);
 
   // Trap scroll
   useEffect(() => {
@@ -583,6 +600,7 @@ Merci de confirmer les disponibilités et modalités de livraison. Merci à vous
                         qty={cart[product.id] ?? 0}
                         onAdd={() => addToCart(product.id)}
                         onRemove={() => removeFromCart(product.id)}
+                        isHighlighted={product.id === initialProductId}
                       />
                     ))}
                   </div>

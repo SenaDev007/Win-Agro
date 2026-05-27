@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Tag, Loader2, ArrowLeft, Save, ShieldAlert, Check, AlertCircle,
-  Eye, Plus, Edit2, Trash2, X, Flame, Calendar, Percent
+  Eye, Plus, Edit2, Trash2, X, Flame, Calendar, Percent, Link
 } from "lucide-react";
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -422,16 +422,17 @@ export default function AdminCatalogPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {[
-              { label: "Formulaire d'Accompagnement", param: "form=accompagnement", utm: "facebook_post", desc: "Ouvre directement le formulaire d'accompagnement de projet." },
-              { label: "Formulaire d'Inscription Formation", param: "form=formation", utm: "facebook_post", desc: "Ouvre directement le formulaire d'inscription à la formation." },
-              { label: "Catalogue Élevage & Offres Promos", param: "catalog=elevage", utm: "facebook_promo", desc: "Ouvre le catalogue Élevage avec les promotions et décomptes." },
-              { label: "Catalogue Nutrition Animale", param: "catalog=nutrition", utm: "facebook_promo", desc: "Ouvre le catalogue Nutrition avec les provendes." },
-              { label: "Catalogue Agriculture & Plants", param: "catalog=agriculture", utm: "facebook_promo", desc: "Ouvre le catalogue Plants et arbres fruitiers." },
+              { label: "Formulaire d'Accompagnement", param: "f=acc", desc: "Ouvre directement le formulaire d'accompagnement de projet." },
+              { label: "Formulaire d'Inscription Formation", param: "f=for", desc: "Ouvre directement le formulaire d'inscription à la formation." },
+              { label: "Formulaire de Contact / Consultation", param: "f=con", desc: "Ouvre directement le formulaire de contact général." },
+              { label: "Catalogue Élevage & Offres Promos", param: "c=el", desc: "Ouvre le catalogue Élevage avec les promotions et décomptes." },
+              { label: "Catalogue Nutrition Animale", param: "c=nu", desc: "Ouvre le catalogue Nutrition avec les provendes." },
+              { label: "Catalogue Agriculture & Plants", param: "c=ag", desc: "Ouvre le catalogue Plants et arbres fruitiers." },
             ].map((linkInfo, idx) => {
               const baseUrl = typeof window !== "undefined" 
                 ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" + window.location.port : ""}`)
                 : "https://winagrotech.com";
-              const targetUrl = `${baseUrl}/?${linkInfo.param}&utm_source=facebook&utm_medium=social&utm_campaign=${linkInfo.utm}`;
+              const targetUrl = `${baseUrl}/?${linkInfo.param}&src=fb`;
               
               return (
                 <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-4 flex flex-col justify-between gap-3">
@@ -624,6 +625,23 @@ export default function AdminCatalogPage() {
                             title="Gérer l'offre promotionnelle"
                           >
                             <Flame className="w-4 h-4" />
+                          </button>
+
+                          {/* Share Link Button */}
+                          <button
+                            onClick={() => {
+                              const baseUrl = typeof window !== "undefined"
+                                ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" + window.location.port : ""}`)
+                                : "https://winagrotech.com";
+                              const targetUrl = `${baseUrl}/?p=${prod.id}&src=fb`;
+                              navigator.clipboard.writeText(targetUrl);
+                              setSuccessMsg("Lien de partage de l'article copié !");
+                              setTimeout(() => setSuccessMsg(""), 3000);
+                            }}
+                            className="p-2 rounded-xl bg-white/5 border border-white/5 text-gray-300 hover:text-white hover:bg-white/10 hover:border-white/15 transition-all cursor-pointer"
+                            title="Copier le lien de partage Facebook (court)"
+                          >
+                            <Link className="w-4 h-4" />
                           </button>
 
                           {/* Edit */}

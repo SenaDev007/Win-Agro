@@ -19,9 +19,25 @@ export default function AnalyticsTracker() {
 
       // Parse and cache UTM parameters
       const searchParams = new URLSearchParams(window.location.search);
-      const utmSource = searchParams.get("utm_source");
-      const utmMedium = searchParams.get("utm_medium");
-      const utmCampaign = searchParams.get("utm_campaign");
+      let utmSource = searchParams.get("utm_source");
+      let utmMedium = searchParams.get("utm_medium");
+      let utmCampaign = searchParams.get("utm_campaign");
+
+      // Short URL expansion
+      const srcParam = searchParams.get("src");
+      if (srcParam === "fb") {
+        utmSource = "facebook";
+        utmMedium = "social";
+        if (!utmCampaign) {
+          if (searchParams.has("f")) {
+            utmCampaign = "facebook_post";
+          } else if (searchParams.has("p") || searchParams.has("c") || searchParams.has("catalog") || searchParams.has("form")) {
+            utmCampaign = "facebook_promo";
+          } else {
+            utmCampaign = "facebook_post";
+          }
+        }
+      }
 
       if (utmSource) sessionStorage.setItem("win_agro_utm_source", utmSource);
       if (utmMedium) sessionStorage.setItem("win_agro_utm_medium", utmMedium);

@@ -23,10 +23,14 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const formParam = params.get("form");
+    const formParam = params.get("form") || params.get("f");
     const contactParam = params.get("contact");
     if (formParam) {
-      setInitialFormPath(formParam);
+      let resolvedForm = formParam;
+      if (formParam === "acc") resolvedForm = "accompagnement";
+      if (formParam === "for") resolvedForm = "formation";
+      if (formParam === "con") resolvedForm = "consultation";
+      setInitialFormPath(resolvedForm);
       setIsModalOpen(true);
     } else if (contactParam === "true") {
       setInitialFormPath(null);

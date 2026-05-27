@@ -19,6 +19,7 @@ export default function Products({ products = [], discounts = {} }: ProductsProp
     agriculture: 4
   });
   const [activePromosMap, setActivePromosMap] = useState<Record<string, { active: boolean; label?: string }>>({});
+  const [initialProductId, setInitialProductId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!products || products.length === 0) return;
@@ -63,27 +64,46 @@ export default function Products({ products = [], discounts = {} }: ProductsProp
   }, [products, discounts]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || products.length === 0) return;
     const params = new URLSearchParams(window.location.search);
-    const catalogParam = params.get("catalog");
+    const catalogParam = params.get("catalog") || params.get("c");
+    const productParam = params.get("product") || params.get("p");
     const promoParam = params.get("promo");
-    if (catalogParam) {
-      setOpenCategoryKey(catalogParam);
+
+    if (productParam) {
+      const prod = products.find((x: any) => x.id === productParam);
+      if (prod) {
+        setOpenCategoryKey(prod.category);
+        setInitialProductId(productParam);
+        setIsModalOpen(true);
+      }
+    } else if (catalogParam) {
+      let resolvedCat = catalogParam;
+      if (catalogParam === "el") resolvedCat = "elevage";
+      if (catalogParam === "nu") resolvedCat = "nutrition";
+      if (catalogParam === "ag") resolvedCat = "agriculture";
+      setOpenCategoryKey(resolvedCat);
+      setInitialProductId(null);
       setIsModalOpen(true);
     } else if (promoParam === "true") {
       setOpenCategoryKey("elevage");
+      setInitialProductId(null);
       setIsModalOpen(true);
     }
-  }, []);
+  }, [products]);
 
   const handleCardClick = (key: string) => {
     setOpenCategoryKey(key);
+    setInitialProductId(null);
     setIsModalOpen(true);
   };
 
   const handleClose = () => {
     setIsModalOpen(false);
-    setTimeout(() => setOpenCategoryKey(null), 300);
+    setTimeout(() => {
+      setOpenCategoryKey(null);
+      setInitialProductId(null);
+    }, 300);
   };
 
   const categories = [
@@ -260,6 +280,7 @@ export default function Products({ products = [], discounts = {} }: ProductsProp
         categoryKey={openCategoryKey}
         products={products}
         discounts={discounts}
+        initialProductId={initialProductId}
       />
     </section>
   );
