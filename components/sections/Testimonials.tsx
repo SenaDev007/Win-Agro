@@ -118,14 +118,14 @@ export default function Testimonials() {
           testimonials={firstRow}
           speed={isLargeSet ? 28 : 34}
           direction="left"
-          cardHeight={210}
+          cardHeight={240}
         />
         {isLargeSet && (
           <TestimonialsCarousel
             testimonials={secondRow}
             speed={34}
             direction="right"
-            cardHeight={210}
+            cardHeight={240}
           />
         )}
       </div>

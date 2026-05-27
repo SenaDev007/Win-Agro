@@ -111,7 +111,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
             key={index}
             whileHover={{ scale: 1.03, y: -4, borderColor: "rgba(9, 137, 71, 0.3)" }}
             className="bg-white border border-primary-pale/60 shadow-md rounded-3xl p-6 flex flex-col justify-between flex-shrink-0 w-[340px] transition-colors duration-200 cursor-default card-shimmer"
-            style={{ height: audioUrl ? cardHeight + 25 : cardHeight }}
+            style={{ height: cardHeight }}
           >
             <p className="text-[13.5px] leading-relaxed text-gray-text font-sans break-words whitespace-normal overflow-hidden italic">
               {highlight
