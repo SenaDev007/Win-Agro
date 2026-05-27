@@ -18,7 +18,7 @@ function winAgroEmailHeader(): string {
   return `
     <div style="background: linear-gradient(135deg, #07130A 0%, #0F2214 100%); padding: 28px 32px; border-radius: 12px 12px 0 0; text-align: center;">
       <img
-        src="https://winagrotech.com/Logo Win Agro.png"
+        src="https://winagrotech.com/logo-win-agro.png"
         alt="Win Agro"
         width="72"
         height="72"
@@ -34,7 +34,7 @@ function winAgroEmailFooter(): string {
   return `
     <div style="background-color: #07130A; border-radius: 0 0 12px 12px; padding: 24px 32px; text-align: center; margin-top: 0;">
       <img
-        src="https://winagrotech.com/Logo Win Agro.png"
+        src="https://winagrotech.com/logo-win-agro.png"
         alt="Win Agro"
         width="40"
         height="40"

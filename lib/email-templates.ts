@@ -1,6 +1,6 @@
 // ─── Win Agro — Shared Branded Email Template Library ───────────────────────
 
-const LOGO_URL = "https://winagrotech.com/Logo%20Win%20Agro.png";
+const LOGO_URL = "https://winagrotech.com/logo-win-agro.png";
 const SITE_URL = "https://winagrotech.com";
 const WA_URL   = "https://wa.me/2290161336548";
 const MAIL     = "contact@winagrotech.com";
