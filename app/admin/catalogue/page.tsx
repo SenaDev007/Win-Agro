@@ -426,7 +426,7 @@ export default function AdminCatalogPage() {
               { label: "Formulaire d'Inscription Formation", param: "f=for", desc: "Ouvre directement le formulaire d'inscription à la formation." },
               { label: "Formulaire de Consultation (Modal)", param: "f=con", desc: "Ouvre directement le formulaire de consultation / diagnostic." },
               { label: "Formulaire de Contact Principal", param: "scroll=contact", desc: "Fait défiler la page d'accueil directement vers le formulaire de contact principal." },
-              { label: "Catalogue Élevage & Offres Promos", param: "c=el", desc: "Ouvre le catalogue Élevage avec les promotions et décomptes." },
+              { label: "Catalogue Élevage", param: "c=el", desc: "Ouvre le catalogue Élevage." },
               { label: "Catalogue Nutrition Animale", param: "c=nu", desc: "Ouvre le catalogue Nutrition avec les provendes." },
               { label: "Catalogue Agriculture & Plants", param: "c=ag", desc: "Ouvre le catalogue Plants et arbres fruitiers." },
             ].map((linkInfo, idx) => {
@@ -465,12 +465,54 @@ export default function AdminCatalogPage() {
           </div>
 
           {/* Dynamic Active Promos Sharing Links */}
-          {products.filter(p => isPromoActive(p.promoPrice, p.promoUntil)).length > 0 && (
-            <div className="pt-4 border-t border-white/5">
-              <h3 className="text-xs font-black text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          {(products.filter(p => isPromoActive(p.promoPrice, p.promoUntil)).length > 0 ||
+            categories.some(c => discounts[c.key] && discounts[c.key].percentage > 0 && new Date(discounts[c.key].until) > new Date())) && (
+            <div className="pt-4 border-t border-white/5 space-y-4">
+              <h3 className="text-xs font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
                 🔥 Liens Spécifiques des Offres Promos Créées
               </h3>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Global Category/Catalogue Promos */}
+                {categories
+                  .filter(c => discounts[c.key] && discounts[c.key].percentage > 0 && new Date(discounts[c.key].until) > new Date())
+                  .map(c => {
+                    const baseUrl = typeof window !== "undefined" 
+                      ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" + window.location.port : ""}`)
+                      : "https://winagrotech.com";
+                    const shortCat = c.key === "elevage" ? "el" : (c.key === "nutrition" ? "nu" : "ag");
+                    const targetUrl = `${baseUrl}/?c=${shortCat}&src=fb`;
+                    return (
+                      <div key={c.key} className="bg-amber-950/20 border border-amber-500/20 rounded-2xl p-4 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-bold text-white block">Promo Globale : {c.label.split(" (")[0]}</span>
+                          <span className="text-[10px] text-amber-300 font-mono block mt-0.5">
+                            Réduction globale de -{discounts[c.key].percentage}% sur tout le catalogue
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-auto">
+                          <input
+                            type="text"
+                            readOnly
+                            value={targetUrl}
+                            className="flex-grow min-w-0 bg-black/40 border border-amber-700/20 rounded-xl px-2.5 py-1.5 text-[9px] font-mono text-amber-200 focus:outline-none"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(targetUrl);
+                              setSuccessMsg(`Lien promo globale pour ${c.label.split(" (")[0]} copié !`);
+                              setTimeout(() => setSuccessMsg(""), 3000);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#07130A] text-[10px] font-black shrink-0 transition-colors cursor-pointer"
+                          >
+                            Copier
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {/* 2. Specific Product Promos */}
                 {products
                   .filter(p => isPromoActive(p.promoPrice, p.promoUntil))
                   .map(p => {
@@ -481,7 +523,7 @@ export default function AdminCatalogPage() {
                     return (
                       <div key={p.id} className="bg-orange-950/20 border border-orange-500/20 rounded-2xl p-4 flex flex-col justify-between gap-3">
                         <div>
-                          <span className="text-xs font-bold text-white block">Promo : {p.name}</span>
+                          <span className="text-xs font-bold text-white block">Promo Article : {p.name}</span>
                           <span className="text-[10px] text-orange-300 font-mono block mt-0.5">
                             Prix promo : {p.promoPrice?.toLocaleString("fr-FR")} FCFA (normal : {p.price?.toLocaleString("fr-FR")} FCFA)
                           </span>

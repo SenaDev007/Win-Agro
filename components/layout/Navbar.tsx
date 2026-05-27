@@ -28,11 +28,8 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
     const scrollParam = params.get("scroll");
 
     if (formParam) {
-      let resolvedForm = formParam;
-      if (formParam === "acc") resolvedForm = "accompagnement";
-      if (formParam === "for") resolvedForm = "formation";
-      if (formParam === "con") resolvedForm = "consultation";
-      setInitialFormPath(resolvedForm);
+      // Open the main choice modal (Selector) instead of a specific form directly
+      setInitialFormPath(null);
       setIsModalOpen(true);
     } else if (contactParam === "true") {
       setInitialFormPath(null);
