@@ -51,8 +51,9 @@ const STATIC_FALLBACK_TESTIMONIALS: Testimonial[] = [
 ];
 
 export default function Testimonials() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(STATIC_FALLBACK_TESTIMONIALS);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/testimonials")
@@ -60,9 +61,17 @@ export default function Testimonials() {
       .then(data => {
         if (data.success && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
           setTestimonials(data.testimonials);
+        } else {
+          setTestimonials(STATIC_FALLBACK_TESTIMONIALS);
         }
       })
-      .catch(err => console.error("Error loading testimonials", err));
+      .catch(err => {
+        console.error("Error loading testimonials", err);
+        setTestimonials(STATIC_FALLBACK_TESTIMONIALS);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   // Split to prevent cards duplication between the two scrolling carousels only if we have enough testimonials (>= 6)
@@ -112,23 +121,44 @@ export default function Testimonials() {
         </div>
       </div>
 
-      {/* Dynamic Scrolling Carousels */}
-      <div className="space-y-6 w-full relative z-10 select-none pointer-events-auto">
-        <TestimonialsCarousel
-          testimonials={firstRow}
-          speed={isLargeSet ? 28 : 34}
-          direction="left"
-          cardHeight={240}
-        />
-        {isLargeSet && (
+      {/* Skeletons or Dynamic Scrolling Carousels */}
+      {isLoading ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white border border-primary-pale/60 shadow-md rounded-3xl p-6 h-[240px] flex flex-col justify-between animate-pulse">
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded-full w-5/6" />
+                <div className="h-4 bg-gray-200 rounded-full w-full" />
+                <div className="h-4 bg-gray-200 rounded-full w-4/5" />
+              </div>
+              <div className="flex items-center gap-3 pt-4 border-t border-primary-pale/40">
+                <div className="w-11 h-11 rounded-full bg-gray-200" />
+                <div className="space-y-2 flex-grow">
+                  <div className="h-3 bg-gray-200 rounded-full w-1/3" />
+                  <div className="h-3 bg-gray-200 rounded-full w-1/2" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6 w-full relative z-10 select-none pointer-events-auto">
           <TestimonialsCarousel
-            testimonials={secondRow}
-            speed={34}
-            direction="right"
+            testimonials={firstRow}
+            speed={isLargeSet ? 28 : 34}
+            direction="left"
             cardHeight={240}
           />
-        )}
-      </div>
+          {isLargeSet && (
+            <TestimonialsCarousel
+              testimonials={secondRow}
+              speed={34}
+              direction="right"
+              cardHeight={240}
+            />
+          )}
+        </div>
+      )}
 
       <SubmitTestimonialModal isOpen={isSubmitOpen} onClose={() => setIsSubmitOpen(false)} />
     </section>

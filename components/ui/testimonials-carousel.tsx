@@ -22,23 +22,56 @@ interface TestimonialsCarouselProps {
   className?: string;
 }
 
-const AudioPlayer = ({ src }: { src: string }) => {
+export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
+  testimonials,
+  speed = 35,
+  direction = "left",
+  cardHeight = 220,
+  className,
+}) => {
+  const loopTestimonials = [...testimonials, ...testimonials, ...testimonials];
+
+  // Global audio states for this carousel
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!audioRef.current) return;
+  // Mobile touch pause states
+  const [touchPaused, setTouchPaused] = useState(false);
+  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play().catch((err) => console.error("Audio playback error:", err));
-      setIsPlaying(true);
-    }
+  const handleTouchStart = () => {
+    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+    setTouchPaused(true);
   };
+
+  const handleTouchEnd = () => {
+    touchTimeoutRef.current = setTimeout(() => {
+      setTouchPaused(false);
+    }, 2500);
+  };
+
+  // Sync HTMLAudioElement state with React state
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (activeUrl) {
+      if (audioRef.current.src !== activeUrl) {
+        audioRef.current.src = activeUrl;
+        audioRef.current.load();
+      }
+      if (isPlaying) {
+        audioRef.current.play().catch(err => {
+          console.error("Audio playback error:", err);
+          setIsPlaying(false);
+        });
+      } else {
+        audioRef.current.pause();
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  }, [activeUrl, isPlaying]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -50,62 +83,43 @@ const AudioPlayer = ({ src }: { src: string }) => {
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(0);
+    setActiveUrl(null);
   };
 
+  const handleCardPlayToggle = (url: string) => {
+    if (activeUrl === url) {
+      setIsPlaying(!isPlaying);
+    } else {
+      setActiveUrl(url);
+      setIsPlaying(true);
+      setProgress(0);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+    };
+  }, []);
+
+  const isPaused = touchPaused || isPlaying;
+
   return (
-    <div className="flex items-center gap-2 bg-primary-pale border border-primary-green/10 rounded-full px-2.5 py-1 w-full mt-2 transition-all">
+    <div className={`overflow-hidden w-full ${className}`}>
+      {/* Single root-level HTML5 Audio tag to prevent duplicate audio elements/mobile sound blocking */}
       <audio
         ref={audioRef}
-        src={src}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         className="hidden"
         preload="metadata"
       />
-      <button
-        type="button"
-        onClick={togglePlay}
-        className="w-6 h-6 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-sm"
-      >
-        {isPlaying ? <Pause className="w-3 h-3 fill-white" /> : <Play className="w-3 h-3 fill-white ml-0.5" />}
-      </button>
-      
-      <div className="flex-grow flex flex-col justify-center min-w-0">
-        <div className="h-1 w-full bg-primary-green/15 rounded-full overflow-hidden relative">
-          <div 
-            className="h-full bg-primary-green rounded-full transition-all duration-100" 
-            style={{ width: `${progress}%` }} 
-          />
-        </div>
-        <span className="text-[8px] text-primary-green/70 font-semibold uppercase tracking-wider font-sans mt-0.5 truncate">
-          {isPlaying ? "Lecture note vocale..." : "Écouter le témoignage oral"}
-        </span>
-      </div>
 
-      {isPlaying && (
-        <div className="flex items-center gap-0.5 shrink-0 px-1">
-          <span className="w-0.5 h-1.5 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "0ms", animationDuration: "0.6s" }} />
-          <span className="w-0.5 h-3 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "150ms", animationDuration: "0.6s" }} />
-          <span className="w-0.5 h-2 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "300ms", animationDuration: "0.6s" }} />
-        </div>
-      )}
-    </div>
-  );
-};
-
-export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
-  testimonials,
-  speed = 35,
-  direction = "left",
-  cardHeight = 220,
-  className,
-}) => {
-  const loopTestimonials = [...testimonials, ...testimonials, ...testimonials];
-
-  return (
-    <div className={`overflow-hidden w-full ${className}`}>
       <div
         className={`flex gap-6 w-max ${direction === "left" ? "animate-marquee-left" : "animate-marquee-right"} hover:[animation-play-state:paused] pointer-events-auto`}
+        style={isPaused ? { animationPlayState: "paused" } : undefined}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {loopTestimonials.map(({ text, highlight, image, name, role, audioUrl }, index) => (
           <motion.div
@@ -129,7 +143,44 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
                 : text}
             </p>
 
-            {audioUrl && <AudioPlayer src={audioUrl} />}
+            {audioUrl && (
+              <div className="flex items-center gap-2 bg-primary-pale border border-primary-green/10 rounded-full px-2.5 py-1 w-full mt-2 transition-all">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCardPlayToggle(audioUrl);
+                  }}
+                  className="w-6 h-6 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-sm"
+                >
+                  {activeUrl === audioUrl && isPlaying ? (
+                    <Pause className="w-3 h-3 fill-white" />
+                  ) : (
+                    <Play className="w-3 h-3 fill-white ml-0.5" />
+                  )}
+                </button>
+                
+                <div className="flex-grow flex flex-col justify-center min-w-0">
+                  <div className="h-1 w-full bg-primary-green/15 rounded-full overflow-hidden relative">
+                    <div 
+                      className="h-full bg-primary-green rounded-full transition-all duration-100" 
+                      style={{ width: `${activeUrl === audioUrl ? progress : 0}%` }} 
+                    />
+                  </div>
+                  <span className="text-[8px] text-primary-green/70 font-semibold uppercase tracking-wider font-sans mt-0.5 truncate">
+                    {activeUrl === audioUrl && isPlaying ? "Lecture note vocale..." : "Écouter le témoignage oral"}
+                  </span>
+                </div>
+
+                {activeUrl === audioUrl && isPlaying && (
+                  <div className="flex items-center gap-0.5 shrink-0 px-1">
+                    <span className="w-0.5 h-1.5 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "0ms", animationDuration: "0.6s" }} />
+                    <span className="w-0.5 h-3 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "150ms", animationDuration: "0.6s" }} />
+                    <span className="w-0.5 h-2 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "300ms", animationDuration: "0.6s" }} />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-primary-pale/40">
               <Image
