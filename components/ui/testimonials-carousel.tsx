@@ -55,6 +55,8 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
   const handleCardPlayToggle = (url: string) => {
     if (!audioRef.current) return;
 
+    audioRef.current.volume = 1.0;
+
     if (activeUrl === url) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -108,7 +110,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         className="hidden"
-        preload="metadata"
+        preload="auto"
       />
 
       <div

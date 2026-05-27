@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     const ext = file.name.split(".").pop() || "png";
     const blobName = `testimonials/public-${uuidv4()}.${ext}`;
-    const { url } = await put(blobName, file, { access: "public" });
+    const { url } = await put(blobName, file, { access: "public", contentType: file.type });
 
     return NextResponse.json({ success: true, url });
   } catch (error: any) {

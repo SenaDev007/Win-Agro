@@ -60,6 +60,8 @@ const AdminAudioPlayer = ({ src }: { src: string }) => {
     e.stopPropagation();
     if (!audioRef.current) return;
 
+    audioRef.current.volume = 1.0;
+
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -89,7 +91,7 @@ const AdminAudioPlayer = ({ src }: { src: string }) => {
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         className="hidden"
-        preload="metadata"
+        preload="auto"
       />
       <button
         type="button"

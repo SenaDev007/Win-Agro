@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         }
         const ext = fileObj.name.split(".").pop() || "png";
         const blobName = `testimonials/${uuidv4()}.${ext}`;
-        const { url } = await put(blobName, fileObj, { access: "public" });
+        const { url } = await put(blobName, fileObj, { access: "public", contentType: fileObj.type });
         cleanImage = url;
       } else {
         const imageUrl = formData.get("image") as string;
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         }
         const ext = fileObj.name.split(".").pop() || "mp3";
         const blobName = `testimonials-audio/${uuidv4()}.${ext}`;
-        const { url } = await put(blobName, fileObj, { access: "public" });
+        const { url } = await put(blobName, fileObj, { access: "public", contentType: fileObj.type || "audio/mpeg" });
         cleanAudioUrl = url;
       } else {
         const audioUrl = formData.get("audioUrl") as string;
