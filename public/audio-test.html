@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Audio — Win Agro</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0a1a0e;
+      color: white;
+      gap: 24px;
+      padding: 20px;
+    }
+    h1 { color: #4ade80; font-size: 1.4rem; text-align: center; }
+    .card {
+      background: #1a2e1e;
+      border: 1px solid #2d5a35;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .card h2 { color: #4ade80; margin-top: 0; font-size: 1rem; }
+    audio { width: 100%; margin-top: 10px; }
+    .info { font-size: 0.75rem; color: #888; word-break: break-all; margin-top: 8px; }
+    .result {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .success { background: #14532d; border: 1px solid #4ade80; color: #4ade80; }
+    .error { background: #7f1d1d; border: 1px solid #f87171; color: #f87171; }
+    button {
+      background: #098947;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #0a6b38; }
+  </style>
+</head>
+<body>
+
+  <h1>🎵 Diagnostic Audio — Win Agro</h1>
+  <p style="color:#aaa;text-align:center;max-width:400px;font-size:0.85rem">
+    Cette page teste directement la lecture audio sans React ni JavaScript complexe. 
+    Utilisez les boutons natifs du navigateur pour lire le son.
+  </p>
+
+  <div class="card">
+    <h2>Test 1 — Fichier témoignage Sèna T. (Vercel Blob)</h2>
+    <audio 
+      id="audio1"
+      controls 
+      preload="auto"
+      src="https://4cwebabatgkwfmxs.public.blob.vercel-storage.com/testimonials-audio/a8ca2e5d-517d-4a8c-96cb-fca5c7b231b3.mp3">
+      Votre navigateur ne supporte pas l'audio HTML5.
+    </audio>
+    <p class="info">URL: testimonials-audio/a8ca2e5d-517d-4a8c-96cb-fca5c7b231b3.mp3</p>
+    <div id="result1"></div>
+  </div>
+
+  <div class="card">
+    <h2>Test 2 — Fichier MP3 standard de référence (W3Schools)</h2>
+    <audio 
+      id="audio2"
+      controls 
+      preload="auto"
+      src="https://www.w3schools.com/html/horse.mp3">
+      Votre navigateur ne supporte pas l'audio HTML5.
+    </audio>
+    <p class="info">URL: https://www.w3schools.com/html/horse.mp3</p>
+    <div id="result2"></div>
+  </div>
+
+  <div class="card">
+    <h2>Test 3 — Fichier local servi par Next.js</h2>
+    <audio 
+      id="audio3"
+      controls 
+      preload="auto"
+      src="/test-sound.mp3">
+      Votre navigateur ne supporte pas l'audio HTML5.
+    </audio>
+    <p class="info">URL: /test-sound.mp3 (même domaine que le site)</p>
+    <div id="result3"></div>
+  </div>
+
+  <script>
+    // Auto-detect errors for each audio element
+    [1, 2, 3].forEach(i => {
+      const audio = document.getElementById(`audio${i}`);
+      const result = document.getElementById(`result${i}`);
+
+      audio.addEventListener('canplaythrough', () => {
+        result.innerHTML = '<div class="result success">✅ Audio chargé avec succès — cliquez Play pour écouter</div>';
+      });
+
+      audio.addEventListener('error', (e) => {
+        const err = audio.error;
+        let msg = 'Erreur inconnue';
+        if (err) {
+          const codes = {1:'ABORTED', 2:'NETWORK', 3:'DECODE', 4:'SRC_NOT_SUPPORTED'};
+          msg = `Code ${err.code} — ${codes[err.code] || 'UNKNOWN'}`;
+        }
+        result.innerHTML = `<div class="result error">❌ Erreur de chargement audio : ${msg}</div>`;
+      });
+
+      audio.addEventListener('playing', () => {
+        result.innerHTML = '<div class="result success">🔊 Audio en lecture ! Si vous n\'entendez rien, le problème vient de vos haut-parleurs ou du volume de l\'appareil.</div>';
+      });
+    });
+  </script>
+
+</body>
+</html>
