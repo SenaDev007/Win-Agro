@@ -1985,6 +1985,13 @@ Nous serions ravis de vous accompagner et restons entièrement disponibles pour 
                     filteredOrders.map(lead => {
                       const detailsEntries = Object.entries(lead.details || {}).filter(([k]) => k !== "Total estimé");
                       const totalEstim = (lead.details as any)?.["Total estimé"] || "Sur devis";
+                      
+                      // Construct cart-specific text for row quick actions
+                      const orderItemsText = detailsEntries.map(([k, v]) => `- ${k} : ${v}`).join("\n");
+                      const totalTextForWa = totalEstim !== "Sur devis" ? ` pour un total estimé de ${totalEstim}` : "";
+                      const nameParsed = lead.name.split(" ")[0];
+                      const waQuickMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Nous avons bien reçu votre commande catalogue contenant :\n${orderItemsText}\n${totalTextForWa}.\n\nPouvez-vous me confirmer votre disponibilité pour planifier la livraison ?`;
+
                       return (
                         <tr 
                           key={lead.id} 
@@ -2040,7 +2047,7 @@ Nous serions ravis de vous accompagner et restons entièrement disponibles pour 
                             <div className="flex items-center gap-1.5">
                               {/* Quick WhatsApp */}
                               <a
-                                href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(`Bonjour ${lead.name.split(" ")[0]}, c'est Victoire de Win Agro. 🌱 Nous avons bien reçu votre commande catalogue. Pouvez-vous confirmer votre disponibilité pour la livraison ?`)}`}
+                                href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(waQuickMessage)}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 title="Contacter sur WhatsApp"
@@ -2055,9 +2062,10 @@ Nous serions ravis de vous accompagner et restons entièrement disponibles pour 
                                 const subj = `🌱 Votre commande Win Agro — Confirmation de disponibilité`;
                                 const body = `Bonjour ${lead.name},
 
-Nous avons bien reçu votre commande catalogue Win Agro et sommes ravis de vous confirmer la disponibilité de nos produits.
-
-Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos disponibilités ?`;
+Nous avons bien reçu votre commande catalogue Win Agro contenant :
+${orderItemsText}
+${totalEstim !== "Sur devis" ? `\nMontant total estimé : ${totalEstim}\n` : ""}
+Nous sommes ravis de vous confirmer la disponibilité de ces produits. Afin de planifier au mieux votre livraison, pourriez-vous nous indiquer vos disponibilités ?`;
                                 const isSending = sendingEmailId === lead.id;
                                 return (
                                   <button
