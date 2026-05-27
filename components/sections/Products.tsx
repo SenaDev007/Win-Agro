@@ -5,7 +5,12 @@ import { motion } from "framer-motion";
 import { Bird, Wheat, Trees, ChevronRight } from "lucide-react";
 import CatalogueModal from "@/components/ui/CatalogueModal";
 
-export default function Products() {
+interface ProductsProps {
+  products?: any[];
+  discounts?: Record<string, any>;
+}
+
+export default function Products({ products = [], discounts = {} }: ProductsProps) {
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({
@@ -16,57 +21,46 @@ export default function Products() {
   const [activePromosMap, setActivePromosMap] = useState<Record<string, { active: boolean; label?: string }>>({});
 
   useEffect(() => {
-    fetch("/api/admin/products")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          const { products, discounts } = data;
-          
-          // Calculate counts
-          const countsMap: Record<string, number> = { elevage: 0, nutrition: 0, agriculture: 0 };
-          if (products) {
-            products.forEach((p: any) => {
-              if (p.isActive) {
-                countsMap[p.category] = (countsMap[p.category] || 0) + 1;
-              }
-            });
-            setCounts(countsMap);
-          }
+    if (!products || products.length === 0) return;
 
-          // Calculate which categories have active promos or global discounts
-          const promosMap: Record<string, { active: boolean; label?: string }> = {
-            elevage: { active: false },
-            nutrition: { active: false },
-            agriculture: { active: false }
-          };
+    // Calculate counts
+    const countsMap: Record<string, number> = { elevage: 0, nutrition: 0, agriculture: 0 };
+    products.forEach((p: any) => {
+      if (p.isActive) {
+        countsMap[p.category] = (countsMap[p.category] || 0) + 1;
+      }
+    });
+    setCounts(countsMap);
 
-          const categories = ["elevage", "nutrition", "agriculture"];
-          const now = new Date();
+    // Calculate which categories have active promos or global discounts
+    const promosMap: Record<string, { active: boolean; label?: string }> = {
+      elevage: { active: false },
+      nutrition: { active: false },
+      agriculture: { active: false }
+    };
 
-          // 1. Check global category discounts first
-          categories.forEach(cat => {
-            const disc = discounts?.[cat];
-            if (disc && disc.percentage > 0 && new Date(disc.until) > now) {
-              promosMap[cat] = { active: true, label: `-${disc.percentage}% Global` };
-            }
-          });
+    const categories = ["elevage", "nutrition", "agriculture"];
+    const now = new Date();
 
-          // 2. Check individual product promotions in each category
-          if (products) {
-            products.forEach((p: any) => {
-              if (p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > now) {
-                if (!promosMap[p.category].active) {
-                  promosMap[p.category] = { active: true, label: "PROMO 🔥" };
-                }
-              }
-            });
-          }
+    // 1. Check global category discounts first
+    categories.forEach(cat => {
+      const disc = discounts?.[cat];
+      if (disc && disc.percentage > 0 && new Date(disc.until) > now) {
+        promosMap[cat] = { active: true, label: `-${disc.percentage}% Global` };
+      }
+    });
 
-          setActivePromosMap(promosMap);
+    // 2. Check individual product promotions in each category
+    products.forEach((p: any) => {
+      if (p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > now) {
+        if (!promosMap[p.category].active) {
+          promosMap[p.category] = { active: true, label: "PROMO 🔥" };
         }
-      })
-      .catch(err => console.error("Error loading products for counts and promos:", err));
-  }, []);
+      }
+    });
+
+    setActivePromosMap(promosMap);
+  }, [products, discounts]);
 
   const handleCardClick = (key: string) => {
     setOpenCategoryKey(key);
@@ -250,6 +244,8 @@ export default function Products() {
         isOpen={isModalOpen}
         onClose={handleClose}
         categoryKey={openCategoryKey}
+        products={products}
+        discounts={discounts}
       />
     </section>
   );

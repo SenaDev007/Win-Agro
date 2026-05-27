@@ -23,15 +23,22 @@ export default function Home() {
   const [bannerClosed, setBannerClosed] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/products")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          if (data.products) setProducts(data.products);
-          if (data.discounts) setDiscounts(data.discounts);
-        }
-      })
-      .catch((err) => console.error("❌ Failed to fetch products for client home:", err));
+    const fetchData = () => {
+      fetch("/api/admin/products")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            if (data.products) setProducts(data.products);
+            if (data.discounts) setDiscounts(data.discounts);
+          }
+        })
+        .catch((err) => console.error("❌ Failed to fetch products for client home:", err));
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds for real-time changes
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -87,7 +94,7 @@ export default function Home() {
       {/* 2. Main SPA Sections (Strategic flow: Attract -> Persuade -> Assure -> Convert) */}
       <main className={`flex-grow transition-all duration-300 ${showBanner ? "pt-[104px]" : "pt-16"}`}>
         {/* Section 01 — Hero (Problem-solution focus) */}
-        <Hero />
+        <Hero products={products} discounts={discounts} />
 
         {/* Section 02 — stats (Proof and authority) */}
         <Stats />
@@ -96,7 +103,7 @@ export default function Home() {
         <Services onSelectService={handleSelectService} />
 
         {/* Section 04 — Products (Animals, Nutrition and Plants catalog with direct ordering) */}
-        <Products />
+        <Products products={products} discounts={discounts} />
 
         {/* Section 05 — About (Victoire's personal story & biological vision) */}
         <About />

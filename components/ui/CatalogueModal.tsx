@@ -234,12 +234,14 @@ interface CatalogueModalProps {
   isOpen: boolean;
   onClose: () => void;
   categoryKey: string | null;
+  products?: any[];
+  discounts?: Record<string, any>;
 }
 
-export default function CatalogueModal({ isOpen, onClose, categoryKey }: CatalogueModalProps) {
+export default function CatalogueModal({ isOpen, onClose, categoryKey, products: propProducts, discounts: propDiscounts }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [dynamicProducts, setDynamicProducts] = useState<any[]>([]);
-  const [discounts, setDiscounts] = useState<Record<string, any>>({});
+  const [localProducts, setLocalProducts] = useState<any[]>([]);
+  const [localDiscounts, setLocalDiscounts] = useState<Record<string, any>>({});
   const [productsLoading, setProductsLoading] = useState(true);
   const [step, setStep] = useState<"list" | "checkout">("list");
   const [form, setForm] = useState<Record<string, string>>({
@@ -248,22 +250,27 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const dynamicProducts = propProducts !== undefined ? propProducts : localProducts;
+  const discounts = propDiscounts !== undefined ? propDiscounts : localDiscounts;
+
   // Fetch updated catalog products from the admin store dynamically
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && propProducts === undefined) {
       setProductsLoading(true);
       fetch("/api/admin/products")
         .then((res) => res.json())
         .then((resData) => {
           if (resData.success) {
-            if (resData.products) setDynamicProducts(resData.products);
-            if (resData.discounts) setDiscounts(resData.discounts);
+            if (resData.products) setLocalProducts(resData.products);
+            if (resData.discounts) setLocalDiscounts(resData.discounts);
           }
         })
         .catch((err) => console.error("❌ Failed to fetch current catalog prices:", err))
         .finally(() => setProductsLoading(false));
+    } else if (isOpen && propProducts !== undefined) {
+      setProductsLoading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, propProducts]);
 
   const rawCategory = catalogueData.find(c => c.key === categoryKey) ?? null;
 

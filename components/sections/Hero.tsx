@@ -6,7 +6,12 @@ import { motion } from "framer-motion";
 import { Sprout, ArrowRight } from "lucide-react";
 import LeadModal from "@/components/ui/LeadModal";
 
-export default function Hero() {
+interface HeroProps {
+  products?: any[];
+  discounts?: Record<string, any>;
+}
+
+export default function Hero({ products = [], discounts = {} }: HeroProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mountVideo, setMountVideo] = useState(false);
@@ -25,39 +30,39 @@ export default function Hero() {
         }
       })
       .catch(err => console.warn("Failed to load hero stats:", err));
-
-    fetch("/api/admin/products")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          const { products, discounts } = data;
-          
-          // 1. Check for active category discounts
-          const categories = ["elevage", "nutrition", "agriculture"];
-          const catLabels: Record<string, string> = {
-            elevage: "Élevage",
-            nutrition: "Nutrition Animale",
-            agriculture: "Agriculture & Plants"
-          };
-          for (const cat of categories) {
-            const disc = discounts?.[cat];
-            if (disc && disc.percentage > 0 && new Date(disc.until) > new Date()) {
-              setPromoMessage(`⚡ OFFRE FLASH : -${disc.percentage}% sur tout le catalogue ${catLabels[cat]} !`);
-              return;
-            }
-          }
-
-          // 2. Check for active individual promos
-          const activePromo = products.find((p: any) => {
-            return p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > new Date();
-          });
-          if (activePromo) {
-            setPromoMessage(`🔥 OFFRE SPECIALE : ${activePromo.name} est en promotion !`);
-          }
-        }
-      })
-      .catch(err => console.warn("Failed to load hero promos:", err));
   }, []);
+
+  useEffect(() => {
+    if (!products || products.length === 0) {
+      setPromoMessage(null);
+      return;
+    }
+    
+    // 1. Check for active category discounts
+    const categories = ["elevage", "nutrition", "agriculture"];
+    const catLabels: Record<string, string> = {
+      elevage: "Élevage",
+      nutrition: "Nutrition Animale",
+      agriculture: "Agriculture & Plants"
+    };
+    for (const cat of categories) {
+      const disc = discounts?.[cat];
+      if (disc && disc.percentage > 0 && new Date(disc.until) > new Date()) {
+        setPromoMessage(`⚡ OFFRE FLASH : -${disc.percentage}% sur tout le catalogue ${catLabels[cat]} !`);
+        return;
+      }
+    }
+
+    // 2. Check for active individual promos
+    const activePromo = products.find((p: any) => {
+      return p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > new Date();
+    });
+    if (activePromo) {
+      setPromoMessage(`🔥 OFFRE SPECIALE : ${activePromo.name} est en promotion !`);
+    } else {
+      setPromoMessage(null);
+    }
+  }, [products, discounts]);
 
   useEffect(() => {
     // Only load the 4.6MB video on desktop to optimize mobile page load speeds and data usage
