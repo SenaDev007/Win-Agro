@@ -27,29 +27,9 @@ const AudioPlayer = ({ src }: { src: string }) => {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, []);
-
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!audioRef.current) {
-      audioRef.current = new Audio(src);
-      audioRef.current.addEventListener("timeupdate", () => {
-        if (audioRef.current) {
-          const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-          setProgress(isNaN(pct) ? 0 : pct);
-        }
-      });
-      audioRef.current.addEventListener("ended", () => {
-        setIsPlaying(false);
-        setProgress(0);
-      });
-    }
+    if (!audioRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
@@ -60,9 +40,30 @@ const AudioPlayer = ({ src }: { src: string }) => {
     }
   };
 
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setProgress(isNaN(pct) ? 0 : pct);
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+  };
+
   return (
     <div className="flex items-center gap-2 bg-primary-pale border border-primary-green/10 rounded-full px-2.5 py-1 w-full mt-2 transition-all">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+        className="hidden"
+        preload="metadata"
+      />
       <button
+        type="button"
         onClick={togglePlay}
         className="w-6 h-6 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-sm"
       >
