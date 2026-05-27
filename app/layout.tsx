@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   // Couvre à la fois winagrotech.com ET www.winagrotech.com
   metadataBase: new URL("https://winagrotech.com"),
 
-  title: "Élevage au Bénin — Formation, Installation, Vente | Win Agro Agri Tech",
+  title: "Win Agro Agri Tech Solutions — Élevage au Bénin | Formation, Installation, Vente",
   description: "Win Agro Agri Tech Solutions t'accompagne dans ton projet d'élevage au Bénin. Formation pratique, installation de ferme, vente de volailles et provendes. Victoire AHOGNON, experte terrain.",
   alternates: {
     canonical: "https://winagrotech.com",
