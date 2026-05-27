@@ -188,6 +188,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
                       e.stopPropagation();
                       handleCardPlayToggle(audioUrl);
                     }}
+                    aria-label={activeUrl === audioUrl && isPlaying ? "Mettre en pause la note vocale" : "Écouter la note vocale"}
                     className="w-6 h-6 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-sm"
                   >
                     {activeUrl === audioUrl && isPlaying ? (
@@ -254,6 +255,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
             {/* Close button */}
             <button
               onClick={() => setExpandedTestimonial(null)}
+              aria-label="Fermer le témoignage"
               className="absolute top-4 right-4 p-2 rounded-full bg-primary-pale/50 hover:bg-primary-pale text-primary-deep hover:scale-105 transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -274,6 +276,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
                 <button
                   type="button"
                   onClick={() => handleCardPlayToggle(expandedTestimonial.audioUrl!)}
+                  aria-label={activeUrl === expandedTestimonial.audioUrl && isPlaying ? "Mettre en pause la note vocale" : "Écouter la note vocale"}
                   className="w-8 h-8 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-md"
                 >
                   {activeUrl === expandedTestimonial.audioUrl && isPlaying ? (
