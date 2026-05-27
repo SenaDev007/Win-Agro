@@ -2256,10 +2256,10 @@ Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 font-semibold">Phrase clé à mettre en gras (Highlight)</label>
+                      <label className="text-gray-400 font-semibold">Phrase clé à mettre en gras (Highlight) {(!testimonialForm.audioUrl && !testimonialAudioFile) && "*"}</label>
                       <input
                         type="text"
-                        required
+                        required={!testimonialForm.audioUrl && !testimonialAudioFile}
                         value={testimonialForm.highlight}
                         onChange={(e) => setTestimonialForm(prev => ({ ...prev, highlight: e.target.value }))}
                         placeholder="Ex: Taux de mortalité passé de 30% à 8%"
@@ -2268,9 +2268,9 @@ Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 font-semibold">Témoignage complet</label>
+                      <label className="text-gray-400 font-semibold">Témoignage complet {(!testimonialForm.audioUrl && !testimonialAudioFile) && "*"}</label>
                       <textarea
-                        required
+                        required={!testimonialForm.audioUrl && !testimonialAudioFile}
                         rows={4}
                         value={testimonialForm.text}
                         onChange={(e) => setTestimonialForm(prev => ({ ...prev, text: e.target.value }))}

@@ -105,8 +105,8 @@ export async function POST(request: Request) {
       cleanAudioUrl = audioUrl ? sanitize(audioUrl) : null;
     }
 
-    if (!cleanText || !cleanName || !cleanRole) {
-      return NextResponse.json({ success: false, error: "Champs requis manquants" }, { status: 400 });
+    if ((!cleanText && !cleanAudioUrl) || !cleanName || !cleanRole) {
+      return NextResponse.json({ success: false, error: "Champs requis manquants (le texte ou l'audio est requis, ainsi que le nom et le rôle)" }, { status: 400 });
     }
 
     if (id) {
