@@ -3400,31 +3400,52 @@ Afin d'établir un premier pré-diagnostic et d'organiser une intervention rapid
 
 Merci à vous, en attendant votre réponse.`;
                 } else if (typeClean.includes("catalogue") || typeClean.includes("commande")) {
+                  // Commande Catalogue - Cart parsing
+                  const orderItemsList = Object.entries(selectedLead.details || {}).filter(([k]) => k !== "Total estimé").map(([k, v]) => `- ${k} : ${v}`).join("\n");
+                  const totalEst = selectedLead.details?.["Total estimé"] || "";
+                  const totalText = totalEst ? ` pour un total estimé de ${totalEst}` : "";
+
+                  // Detect category to inject smart agricultural advice
+                  let categoryTip = "";
+                  const itemsStr = orderItemsList.toLowerCase();
+                  if (itemsStr.includes("provende") || itemsStr.includes("nutrition") || itemsStr.includes("démarrage") || itemsStr.includes("croissance")) {
+                    categoryTip = "\n💡 Conseil Win Agro : Stockez vos sacs de provende dans un endroit sec et surélevé sur des palettes pour préserver toutes leurs qualités nutritives.";
+                  } else if (itemsStr.includes("poussin") || itemsStr.includes("coquellet") || itemsStr.includes("pondeuse")) {
+                    categoryTip = "\n💡 Conseil Win Agro : Assurez-vous de bien préchauffer votre poussinière à 35°C et de disposer une litière sèche et propre 24h avant l'arrivée de vos sujets.";
+                  } else if (itemsStr.includes("lapin")) {
+                    categoryTip = "\n💡 Conseil Win Agro : Veillez à ce que vos lapins aient toujours de l'eau fraîche et propre à volonté, accompagnée d'un fourrage bien sec pour éviter les ballonnements.";
+                  } else if (itemsStr.includes("plant") || itemsStr.includes("arbre") || itemsStr.includes("semence")) {
+                    categoryTip = "\n💡 Conseil Win Agro : Préparez vos poquets avec un apport généreux de matière organique bien décomposée avant la mise en terre de vos plants.";
+                  }
+
                   // Commande Catalogue - Relance standard
-                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre panier de commande dans notre catalogue. Je souhaite valider avec vous les quantités, les tarifs du jour et planifier la livraison de vos produits/sujets. Êtes-vous disponible pour confirmer cela ensemble ?`;
-                  mailSubject = `🛒 Validation de votre commande de catalogue - Win Agro`;
+                  waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre commande catalogue contenant :\n${orderItemsList}\n${totalText}.\n\nJe souhaite valider avec vous les quantités, nos stocks frais disponibles, et planifier la livraison. Êtes-vous disponible pour valider cela brièvement ensemble ?`;
+                  mailSubject = `🛒 Validation de votre commande catalogue - Win Agro`;
                   mailBody = `Bonjour ${selectedLead.name},
 
 Nous vous remercions pour l'intérêt que vous portez à nos intrants et sujets d'élevage Win Agro.
 
-J'ai bien reçu le récapitulatif de votre commande de catalogue. Afin de vous garantir des sujets vigoureux et des aliments frais, nous devons valider ensemble les stocks disponibles pour votre date de livraison souhaitée.
+J'ai bien reçu le récapitulatif de votre commande contenant les articles suivants :
+${orderItemsList}
+${totalEst ? `\nTotal estimé : ${totalEst}\n` : ""}
+Afin de vous garantir des sujets vigoureux et des aliments frais, nous devons valider ensemble les stocks disponibles pour la date de livraison souhaitée.
 
 Je vous invite à me confirmer vos disponibilités pour un bref appel de validation, ou à répondre directement à ce mail.
 
-Merci à vous, en attendant votre réponse.`;
+Merci pour votre confiance, en attendant votre réponse.`;
 
                   // Commande Catalogue - Confirmation officielle de disponibilité
-                  const orderItems = Object.entries(selectedLead.details || {}).filter(([k]) => k !== "Total estimé").map(([k, v]) => `- ${k} : ${v}`).join("\n");
-                  waConfirmMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Je vous confirme la disponibilité des produits de votre commande catalogue : \n${orderItems}\n\nTout est prêt pour la livraison. Quand seriez-vous disponible pour la recevoir ? Merci à vous, en attendant votre réponse.`;
-                  mailConfirmSubject = `🌱 Confirmation de disponibilité de votre commande - Win Agro`;
+                  waConfirmMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 Je vous confirme la disponibilité totale des produits de votre commande catalogue : \n${orderItemsList}\n${totalEst ? `Total : ${totalEst}\n` : ""}${categoryTip}\n\nTout est prêt pour la livraison. Quand seriez-vous disponible pour la recevoir ? Merci à vous, en attendant votre réponse.`;
+                  mailConfirmSubject = `🌱 Confirmation de disponibilité de votre commande catalogue - Win Agro`;
                   mailConfirmBody = `Bonjour ${selectedLead.name},
 
 Nous vous remercions pour votre confiance et nous avons le plaisir de vous confirmer la disponibilité de l'ensemble des articles de votre commande catalogue :
-${orderItems}
-
+${orderItemsList}
+${totalEst ? `\nTotal estimé : ${totalEst}\n` : ""}
+${categoryTip ? `${categoryTip}\n` : ""}
 Afin de planifier la livraison de votre commande ou d'organiser son retrait dans nos locaux, nous vous invitons à nous préciser vos disponibilités par retour de mail ou par WhatsApp.
 
-Merci à vous, en attendant votre réponse.`;
+Merci encore pour votre confiance, en attendant votre réponse.`;
                 } else {
                   // Contact Standard
                   waMessage = `Bonjour ${nameParsed}, c'est Victoire de Win Agro. 🌱 J'ai bien reçu votre message de contact. Je suis à votre écoute pour vous conseiller et vous guider dans vos projets agricoles au Bénin. Comment puis-je vous aider aujourd'hui ?`;
