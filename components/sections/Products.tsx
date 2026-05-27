@@ -13,22 +13,59 @@ export default function Products() {
     nutrition: 5,
     agriculture: 4
   });
+  const [activePromosMap, setActivePromosMap] = useState<Record<string, { active: boolean; label?: string }>>({});
 
   useEffect(() => {
     fetch("/api/admin/products")
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.products) {
+        if (data.success) {
+          const { products, discounts } = data;
+          
+          // Calculate counts
           const countsMap: Record<string, number> = { elevage: 0, nutrition: 0, agriculture: 0 };
-          data.products.forEach((p: any) => {
-            if (p.isActive) {
-              countsMap[p.category] = (countsMap[p.category] || 0) + 1;
+          if (products) {
+            products.forEach((p: any) => {
+              if (p.isActive) {
+                countsMap[p.category] = (countsMap[p.category] || 0) + 1;
+              }
+            });
+            setCounts(countsMap);
+          }
+
+          // Calculate which categories have active promos or global discounts
+          const promosMap: Record<string, { active: boolean; label?: string }> = {
+            elevage: { active: false },
+            nutrition: { active: false },
+            agriculture: { active: false }
+          };
+
+          const categories = ["elevage", "nutrition", "agriculture"];
+          const now = new Date();
+
+          // 1. Check global category discounts first
+          categories.forEach(cat => {
+            const disc = discounts?.[cat];
+            if (disc && disc.percentage > 0 && new Date(disc.until) > now) {
+              promosMap[cat] = { active: true, label: `-${disc.percentage}% Global` };
             }
           });
-          setCounts(countsMap);
+
+          // 2. Check individual product promotions in each category
+          if (products) {
+            products.forEach((p: any) => {
+              if (p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > now) {
+                if (!promosMap[p.category].active) {
+                  promosMap[p.category] = { active: true, label: "PROMO 🔥" };
+                }
+              }
+            });
+          }
+
+          setActivePromosMap(promosMap);
         }
       })
-      .catch(err => console.error("Error loading products for counts:", err));
+      .catch(err => console.error("Error loading products for counts and promos:", err));
   }, []);
 
   const handleCardClick = (key: string) => {
@@ -161,9 +198,16 @@ export default function Products() {
                       <h3 className="font-serif text-xl sm:text-2xl font-bold text-primary-deep leading-tight">
                         {category.title}
                       </h3>
-                      <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-primary-green bg-primary-pale px-2 py-0.5 rounded-full mt-1 inline-block">
-                        {category.badge}
-                      </span>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-primary-green bg-primary-pale px-2 py-0.5 rounded-full inline-block">
+                          {category.badge}
+                        </span>
+                        {activePromosMap[category.key]?.active && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black bg-gradient-to-r from-orange-600 to-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-md animate-pulse">
+                            {activePromosMap[category.key]?.label || "PROMO 🔥"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
