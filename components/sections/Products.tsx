@@ -62,6 +62,20 @@ export default function Products({ products = [], discounts = {} }: ProductsProp
     setActivePromosMap(promosMap);
   }, [products, discounts]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const catalogParam = params.get("catalog");
+    const promoParam = params.get("promo");
+    if (catalogParam) {
+      setOpenCategoryKey(catalogParam);
+      setIsModalOpen(true);
+    } else if (promoParam === "true") {
+      setOpenCategoryKey("elevage");
+      setIsModalOpen(true);
+    }
+  }, []);
+
   const handleCardClick = (key: string) => {
     setOpenCategoryKey(key);
     setIsModalOpen(true);

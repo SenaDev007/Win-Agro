@@ -10,6 +10,7 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialFormPath, setInitialFormPath] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +18,20 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const formParam = params.get("form");
+    const contactParam = params.get("contact");
+    if (formParam) {
+      setInitialFormPath(formParam);
+      setIsModalOpen(true);
+    } else if (contactParam === "true") {
+      setInitialFormPath(null);
+      setIsModalOpen(true);
+    }
   }, []);
 
   const navLinks = [
@@ -158,7 +173,7 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
       </header>
 
       {/* Lead Modal */}
-      <LeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <LeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} initialPath={initialFormPath} />
     </>
   );
 }

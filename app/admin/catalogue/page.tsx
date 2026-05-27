@@ -407,7 +407,61 @@ export default function AdminCatalogPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+      <main className="flex-grow max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+
+        {/* Link Sharing Generator */}
+        <div className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-4">
+          <div>
+            <h2 className="font-serif text-base font-bold text-primary-green flex items-center gap-2">
+              🔗 Partage de Liens & Capture de Leads
+            </h2>
+            <p className="text-xs text-gray-400 font-sans mt-1">
+              Copiez ces liens et collez-les à la fin de vos publications Facebook. Vos clients pourront ainsi ouvrir directement le bon formulaire ou catalogue, et tous les contacts générés seront enregistrés automatiquement dans votre CRM avec un suivi UTM.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {[
+              { label: "Formulaire d'Accompagnement", param: "form=accompagnement", utm: "facebook_post", desc: "Ouvre directement le formulaire d'accompagnement de projet." },
+              { label: "Formulaire d'Inscription Formation", param: "form=formation", utm: "facebook_post", desc: "Ouvre directement le formulaire d'inscription à la formation." },
+              { label: "Catalogue Élevage & Offres Promos", param: "catalog=elevage", utm: "facebook_promo", desc: "Ouvre le catalogue Élevage avec les promotions et décomptes." },
+              { label: "Catalogue Nutrition Animale", param: "catalog=nutrition", utm: "facebook_promo", desc: "Ouvre le catalogue Nutrition avec les provendes." },
+              { label: "Catalogue Agriculture & Plants", param: "catalog=agriculture", utm: "facebook_promo", desc: "Ouvre le catalogue Plants et arbres fruitiers." },
+            ].map((linkInfo, idx) => {
+              const baseUrl = typeof window !== "undefined" 
+                ? (window.location.hostname.startsWith("admin.") ? `${window.location.protocol}//${window.location.hostname.replace("admin.", "")}${window.location.port ? ":" + window.location.port : ""}` : `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" + window.location.port : ""}`)
+                : "https://winagrotech.com";
+              const targetUrl = `${baseUrl}/?${linkInfo.param}&utm_source=facebook&utm_medium=social&utm_campaign=${linkInfo.utm}`;
+              
+              return (
+                <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-4 flex flex-col justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-white block">{linkInfo.label}</span>
+                    <span className="text-[10px] text-gray-400 font-sans block mt-0.5">{linkInfo.desc}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <input
+                      type="text"
+                      readOnly
+                      value={targetUrl}
+                      className="flex-grow min-w-0 bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-[9px] font-mono text-gray-300 focus:outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(targetUrl);
+                        setSuccessMsg("Lien copié dans le presse-papiers !");
+                        setTimeout(() => setSuccessMsg(""), 3000);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-primary-green hover:bg-primary-green/90 text-[#07130A] text-[10px] font-black shrink-0 transition-colors cursor-pointer"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {categories.map(cat => (
           <div key={cat.key} className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-4">
