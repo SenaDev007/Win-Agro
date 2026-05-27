@@ -17,9 +17,10 @@
   --animate-pulse-slow: pulse-slow 2s infinite ease-in-out;
   --animate-float: float 6s ease-in-out infinite;
   --animate-subtle-spin: subtle-spin 20s linear infinite;
-  --animate-marquee: marquee 120s linear infinite;
-  --animate-marquee-left: marquee-left 35s linear infinite;
-  --animate-marquee-right: marquee-right 35s linear infinite;
+  --animate-marquee: marquee 180s linear infinite;
+  --animate-marquee-left: marquee-left 65s linear infinite;
+  --animate-marquee-right: marquee-right 65s linear infinite;
+  --animate-marquee-badge: marquee 16s linear infinite;
 
   @keyframes pulse-slow {
     0%, 100% {

@@ -171,13 +171,18 @@ export default function Hero({ products = [], discounts = {} }: HeroProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
               onClick={() => handleScroll("#produits")}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-sans font-black text-xs uppercase tracking-wider mb-6 shadow-xl shadow-orange-600/30 cursor-pointer hover:scale-105 active:scale-95 transition-all border border-orange-500/20"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-sans font-black text-xs uppercase tracking-wider mb-6 shadow-xl shadow-orange-600/30 cursor-pointer hover:scale-105 active:scale-95 transition-all border border-orange-500/20 max-w-[280px] sm:max-w-md overflow-hidden"
             >
-              <span className="flex h-2.5 w-2.5 relative">
+              <span className="flex h-2.5 w-2.5 relative shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
               </span>
-              <span>{promoMessage} Profitez-en vite</span>
+              <div className="w-40 sm:w-64 overflow-hidden relative">
+                <div className="flex whitespace-nowrap gap-8 animate-marquee-badge">
+                  <span>{promoMessage} Profitez-en vite ! ⚡</span>
+                  <span>{promoMessage} Profitez-en vite ! ⚡</span>
+                </div>
+              </div>
               <ArrowRight className="w-4 h-4 text-white shrink-0 ml-1" />
             </motion.div>
           )}
