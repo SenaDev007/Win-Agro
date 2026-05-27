@@ -458,6 +458,33 @@ class LocalStore {
     });
   }
 
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      const setting = await prisma.adminSetting.findUnique({
+        where: { key }
+      });
+      return setting?.value || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    await prisma.adminSetting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value }
+    });
+  }
+
+  async deleteSetting(key: string): Promise<void> {
+    try {
+      await prisma.adminSetting.delete({
+        where: { key }
+      });
+    } catch {}
+  }
+
   // --- Testimonials CRUD ---
   async getTestimonials(): Promise<TestimonialRecord[]> {
     const list = await prisma.testimonial.findMany({

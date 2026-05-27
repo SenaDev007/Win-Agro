@@ -239,6 +239,7 @@ interface CatalogueModalProps {
 export default function CatalogueModal({ isOpen, onClose, categoryKey }: CatalogueModalProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [dynamicProducts, setDynamicProducts] = useState<any[]>([]);
+  const [discounts, setDiscounts] = useState<Record<string, any>>({});
   const [productsLoading, setProductsLoading] = useState(true);
   const [step, setStep] = useState<"list" | "checkout">("list");
   const [form, setForm] = useState<Record<string, string>>({
@@ -254,8 +255,9 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
       fetch("/api/admin/products")
         .then((res) => res.json())
         .then((resData) => {
-          if (resData.success && resData.products) {
-            setDynamicProducts(resData.products);
+          if (resData.success) {
+            if (resData.products) setDynamicProducts(resData.products);
+            if (resData.discounts) setDiscounts(resData.discounts);
           }
         })
         .catch((err) => console.error("❌ Failed to fetch current catalog prices:", err))
@@ -277,22 +279,41 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey }: Catalog
 
     const mappedProducts = sourceProducts
       .filter((p: any) => p.isActive)
-      .map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description || "",
-        price: p.price,
-        unit: p.unit.startsWith("FCFA") ? p.unit : `FCFA / ${p.unit}`,
-        isActive: p.isActive,
-        promoPrice: p.promoPrice,
-        promoUntil: p.promoUntil
-      }));
+      .map((p: any) => {
+        const price = p.price;
+        let promoPrice = p.promoPrice;
+        let promoUntil = p.promoUntil;
+
+        // Apply global category-level discount if active and no individual promo is active
+        const individualPromoActive = promoPrice !== null && promoPrice !== undefined && promoUntil && new Date(promoUntil) > new Date();
+        
+        if (!individualPromoActive) {
+          const catDiscount = categoryKey ? discounts?.[categoryKey] : null;
+          const catPromoActive = catDiscount && catDiscount.percentage > 0 && catDiscount.until && new Date(catDiscount.until) > new Date() && price !== null;
+          
+          if (catPromoActive) {
+            promoPrice = Math.round(price * (1 - catDiscount.percentage / 100));
+            promoUntil = catDiscount.until;
+          }
+        }
+
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description || "",
+          price: price,
+          unit: p.unit.startsWith("FCFA") ? p.unit : `FCFA / ${p.unit}`,
+          isActive: p.isActive,
+          promoPrice: promoPrice,
+          promoUntil: promoUntil
+        };
+      });
 
     return {
       ...rawCategory,
       products: mappedProducts
     };
-  }, [rawCategory, dynamicProducts, categoryKey]);
+  }, [rawCategory, dynamicProducts, categoryKey, discounts]);
 
   // Reset cart and step when category changes
   useEffect(() => {
@@ -547,9 +568,6 @@ Merci de confirmer les disponibilités et modalités de livraison. Merci à vous
               ) : (
                 /* Products Grid Step */
                 <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
-                  <p className="text-xs text-gray-500 font-sans mb-4 text-center">
-                    ⚡ Les prix sont indicatifs. Victoire confirmera les tarifs finaux sur WhatsApp.
-                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {category.products.map(product => (
                       <ProductCard

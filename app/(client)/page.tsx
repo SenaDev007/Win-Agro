@@ -18,6 +18,7 @@ export default function Home() {
   // Shared state to allow services cards to dynamically set the contact form dropdown value
   const [selectedService, setSelectedService] = useState<string>("formation_elevage");
   const [products, setProducts] = useState<any[]>([]);
+  const [discounts, setDiscounts] = useState<Record<string, any>>({});
   const [now, setNow] = useState<Date>(new Date());
   const [bannerClosed, setBannerClosed] = useState(false);
 
@@ -25,8 +26,9 @@ export default function Home() {
     fetch("/api/admin/products")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.products) {
-          setProducts(data.products);
+        if (data.success) {
+          if (data.products) setProducts(data.products);
+          if (data.discounts) setDiscounts(data.discounts);
         }
       })
       .catch((err) => console.error("❌ Failed to fetch products for client home:", err));
@@ -39,12 +41,34 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const activePromos = products.filter((p: any) => {
-    if (!p.isActive || p.promoPrice === null || p.promoPrice === undefined || !p.promoUntil) {
-      return false;
-    }
-    return new Date(p.promoUntil) > now;
-  });
+  const activePromos = products
+    .filter((p: any) => p.isActive)
+    .map((p: any) => {
+      const price = p.price;
+      let promoPrice = p.promoPrice;
+      let promoUntil = p.promoUntil;
+
+      const individualPromoActive = promoPrice !== null && promoPrice !== undefined && promoUntil && new Date(promoUntil) > now;
+      
+      if (!individualPromoActive) {
+        const catDiscount = discounts?.[p.category];
+        const catPromoActive = catDiscount && catDiscount.percentage > 0 && catDiscount.until && new Date(catDiscount.until) > now && price !== null;
+        
+        if (catPromoActive) {
+          promoPrice = Math.round(price * (1 - catDiscount.percentage / 100));
+          promoUntil = catDiscount.until;
+        }
+      }
+
+      return {
+        ...p,
+        promoPrice,
+        promoUntil
+      };
+    })
+    .filter((p: any) => {
+      return p.promoPrice !== null && p.promoPrice !== undefined && p.promoUntil && new Date(p.promoUntil) > now;
+    });
 
   const showBanner = activePromos.length > 0 && !bannerClosed;
 

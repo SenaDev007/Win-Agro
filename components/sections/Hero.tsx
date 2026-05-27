@@ -11,6 +11,7 @@ export default function Hero() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mountVideo, setMountVideo] = useState(false);
   const [statsValue, setStatsValue] = useState("500+");
+  const [promoMessage, setPromoMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/stats")
@@ -24,6 +25,38 @@ export default function Hero() {
         }
       })
       .catch(err => console.warn("Failed to load hero stats:", err));
+
+    fetch("/api/admin/products")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const { products, discounts } = data;
+          
+          // 1. Check for active category discounts
+          const categories = ["elevage", "nutrition", "agriculture"];
+          const catLabels: Record<string, string> = {
+            elevage: "Élevage",
+            nutrition: "Nutrition Animale",
+            agriculture: "Agriculture & Plants"
+          };
+          for (const cat of categories) {
+            const disc = discounts?.[cat];
+            if (disc && disc.percentage > 0 && new Date(disc.until) > new Date()) {
+              setPromoMessage(`⚡ OFFRE FLASH : -${disc.percentage}% sur tout le catalogue ${catLabels[cat]} !`);
+              return;
+            }
+          }
+
+          // 2. Check for active individual promos
+          const activePromo = products.find((p: any) => {
+            return p.isActive && p.promoPrice !== null && p.promoUntil && new Date(p.promoUntil) > new Date();
+          });
+          if (activePromo) {
+            setPromoMessage(`🔥 OFFRE SPECIALE : ${activePromo.name} est en promotion !`);
+          }
+        }
+      })
+      .catch(err => console.warn("Failed to load hero promos:", err));
   }, []);
 
   useEffect(() => {
@@ -125,6 +158,24 @@ export default function Hero() {
             </span>
             <Sprout className="w-4 h-4 text-accent-yellow shrink-0" /> Plus de {statsValue} éleveurs déjà accompagnés au Bénin
           </motion.div>
+
+          {/* Promotional Flash Info Badge */}
+          {promoMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              onClick={() => handleScroll("#produits")}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-sans font-black text-xs uppercase tracking-wider mb-6 shadow-xl shadow-orange-600/30 cursor-pointer hover:scale-105 active:scale-95 transition-all border border-orange-500/20"
+            >
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+              </span>
+              <span>{promoMessage} Profitez-en vite</span>
+              <ArrowRight className="w-4 h-4 text-white shrink-0 ml-1" />
+            </motion.div>
+          )}
 
           {/* Staggered Main Title (H1) */}
           <h1 className="font-serif font-extrabold text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.15] mb-6">

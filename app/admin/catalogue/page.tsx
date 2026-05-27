@@ -33,6 +33,13 @@ export default function AdminCatalogPage() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [successMsg, setSuccessMsg] = useState("");
+  const [discounts, setDiscounts] = useState<Record<string, any>>({});
+
+  // Global Category Discount State
+  const [categoryDiscountKey, setCategoryDiscountKey] = useState<string | null>(null);
+  const [categoryDiscountPercentage, setCategoryDiscountPercentage] = useState("");
+  const [categoryDiscountUntil, setCategoryDiscountUntil] = useState("");
+  const [categoryDiscountSaving, setCategoryDiscountSaving] = useState(false);
 
   // Product Add / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,6 +74,7 @@ export default function AdminCatalogPage() {
       const data = await res.json();
       if (data.success) {
         setProducts(data.products);
+        setDiscounts(data.discounts || {});
         const priceMap: Record<string, string> = {};
         const statusMap: Record<string, boolean> = {};
         data.products.forEach((p: any) => {
@@ -272,6 +280,48 @@ export default function AdminCatalogPage() {
     }
   };
 
+  const handleOpenCategoryDiscountPanel = (categoryKey: string) => {
+    setCategoryDiscountKey(categoryKey === categoryDiscountKey ? null : categoryKey);
+    const existing = discounts[categoryKey];
+    if (existing) {
+      setCategoryDiscountPercentage(String(existing.percentage));
+      setCategoryDiscountUntil(isoToDatetimeLocal(existing.until));
+    } else {
+      setCategoryDiscountPercentage("");
+      setCategoryDiscountUntil("");
+    }
+  };
+
+  const handleSaveCategoryDiscount = async (categoryKey: string, clear: boolean = false) => {
+    setCategoryDiscountSaving(true);
+    try {
+      const percentageVal = clear ? null : Number(categoryDiscountPercentage);
+      const untilVal = clear ? null : (categoryDiscountUntil ? new Date(categoryDiscountUntil).toISOString() : null);
+
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set-category-discount",
+          category: categoryKey,
+          discountPercentage: percentageVal,
+          discountUntil: untilVal
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(clear ? "Réduction globale supprimée." : "Réduction globale appliquée !");
+        setTimeout(() => setSuccessMsg(""), 3000);
+        setCategoryDiscountKey(null);
+        await loadProducts();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCategoryDiscountSaving(false);
+    }
+  };
+
   const handleDeleteClick = (prod: any) => {
     setProductToDeleteId(prod.id);
     setProductToDeleteName(prod.name);
@@ -362,15 +412,90 @@ export default function AdminCatalogPage() {
         {categories.map(cat => (
           <div key={cat.key} className="bg-[#0F2214]/50 border border-primary-green/10 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
-              <h2 className="font-serif text-base font-bold text-primary-green">{cat.label}</h2>
-              <button
-                onClick={() => handleOpenAddModal(cat.key)}
-                className="px-3 py-1.5 rounded-xl bg-primary-green/10 hover:bg-primary-green hover:text-[#07130A] text-primary-green text-xs font-black inline-flex items-center gap-1.5 border border-primary-green/20 hover:border-primary-green transition-all cursor-pointer shadow-lg"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Ajouter
-              </button>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="font-serif text-base font-bold text-primary-green">{cat.label}</h2>
+                {discounts[cat.key] && (
+                  <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black bg-gradient-to-r from-amber-500 to-yellow-400 text-[#07130A] px-2 py-0.5 rounded-full animate-pulse shadow-md">
+                    ⚡ RÉDUCTION DE -{discounts[cat.key].percentage}%
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenCategoryDiscountPanel(cat.key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 border transition-all cursor-pointer shadow-lg ${discounts[cat.key] ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500 hover:text-[#07130A]" : "bg-white/5 text-gray-300 border-white/5 hover:bg-amber-500 hover:text-[#07130A] hover:border-amber-500"}`}
+                >
+                  <Percent className="w-3.5 h-3.5" />
+                  Réduction globale
+                </button>
+                <button
+                  onClick={() => handleOpenAddModal(cat.key)}
+                  className="px-3 py-1.5 rounded-xl bg-primary-green/10 hover:bg-primary-green hover:text-[#07130A] text-primary-green text-xs font-black inline-flex items-center gap-1.5 border border-primary-green/20 hover:border-primary-green transition-all cursor-pointer shadow-lg"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Ajouter
+                </button>
+              </div>
             </div>
+
+            {/* Category Global Discount Panel */}
+            {categoryDiscountKey === cat.key && (
+              <div className="bg-gradient-to-r from-amber-950/40 to-yellow-950/30 border border-amber-700/30 rounded-2xl p-4 space-y-3 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Percent className="w-4 h-4 text-amber-400" />
+                  <p className="text-xs font-black text-amber-300 uppercase tracking-wider">Réduction globale — {cat.label}</p>
+                  <button
+                    onClick={() => setCategoryDiscountKey(null)}
+                    className="ml-auto p-1 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-amber-300/70 font-bold uppercase tracking-wider">Pourcentage de réduction (%)</label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 10 pour -10%"
+                      value={categoryDiscountPercentage}
+                      onChange={e => setCategoryDiscountPercentage(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/40 border border-amber-700/30 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-right font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-amber-300/70 font-bold uppercase tracking-wider">Fin de l'offre</label>
+                    <input
+                      type="datetime-local"
+                      value={categoryDiscountUntil}
+                      onChange={e => setCategoryDiscountUntil(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/40 border border-amber-700/30 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 justify-end pt-1">
+                  {discounts[cat.key] && (
+                    <button
+                      onClick={() => handleSaveCategoryDiscount(cat.key, true)}
+                      disabled={categoryDiscountSaving}
+                      className="px-3 py-1.5 rounded-xl bg-red-950/30 hover:bg-red-800/30 text-red-400 hover:text-red-300 text-xs font-bold border border-red-900/30 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <X className="w-3 h-3" /> Supprimer la réduction
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleSaveCategoryDiscount(cat.key, false)}
+                    disabled={categoryDiscountSaving}
+                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-[#07130A] text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-amber-900/30"
+                  >
+                    {categoryDiscountSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Appliquer la réduction
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="divide-y divide-white/5">
               {products.filter(p => p.category === cat.key).length === 0 ? (

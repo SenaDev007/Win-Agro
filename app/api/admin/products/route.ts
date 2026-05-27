@@ -6,7 +6,21 @@ import { localStore } from "@/lib/db";
 export async function GET() {
   try {
     const products = await localStore.getProducts();
-    return NextResponse.json({ success: true, products });
+    const categories = ["elevage", "nutrition", "agriculture"];
+    const discounts: Record<string, { percentage: number; until: string | null } | null> = {};
+    for (const cat of categories) {
+      const percentage = await localStore.getSetting(`category_discount_percentage_${cat}`);
+      const until = await localStore.getSetting(`category_discount_until_${cat}`);
+      if (percentage && until && new Date(until) > new Date()) {
+        discounts[cat] = {
+          percentage: Number(percentage),
+          until: until
+        };
+      } else {
+        discounts[cat] = null;
+      }
+    }
+    return NextResponse.json({ success: true, products, discounts });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 });
   }
@@ -21,7 +35,30 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { action, id, name, description, price, unit, category, isActive, promoPrice, promoUntil } = body;
+    const { action, id, name, description, price, unit, category, isActive, promoPrice, promoUntil, discountPercentage, discountUntil } = body;
+
+    // 0. Set Category Discount action
+    if (action === "set-category-discount") {
+      if (!category) {
+        return NextResponse.json({ success: false, error: "Catégorie manquante" }, { status: 400 });
+      }
+      const percentageKey = `category_discount_percentage_${category}`;
+      const untilKey = `category_discount_until_${category}`;
+
+      if (discountPercentage === null || discountPercentage === undefined) {
+        await localStore.deleteSetting(percentageKey);
+      } else {
+        await localStore.setSetting(percentageKey, String(discountPercentage));
+      }
+
+      if (discountUntil === null || discountUntil === undefined) {
+        await localStore.deleteSetting(untilKey);
+      } else {
+        await localStore.setSetting(untilKey, String(discountUntil));
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     // 1. Create action
     if (action === "create") {
