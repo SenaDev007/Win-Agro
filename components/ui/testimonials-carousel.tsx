@@ -186,13 +186,19 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
             )}
 
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-primary-pale/40">
-              <Image
-                src={image}
-                alt={name}
-                width={44}
-                height={44}
-                className="h-11 w-11 rounded-full object-cover border border-primary-green/20"
-              />
+              {image && image !== "/Logo Win Agro.png" ? (
+                <Image
+                  src={image}
+                  alt={name}
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 rounded-full object-cover border border-primary-green/20"
+                />
+              ) : (
+                <div className="h-11 w-11 rounded-full bg-primary-pale flex items-center justify-center border border-primary-green/20 text-primary-deep font-serif font-black text-sm select-none shadow-sm shrink-0">
+                  {name ? name.charAt(0).toUpperCase() : "?"}
+                </div>
+              )}
               <div className="flex flex-col">
                 <div className="font-serif font-bold text-primary-deep text-sm leading-tight">{name}</div>
                 <div className="text-primary-green/80 font-sans font-semibold text-xs mt-0.5">{role}</div>

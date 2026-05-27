@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     let id = "";
     let cleanText = "";
     let cleanHighlight = "";
-    let cleanImage = "/Logo Win Agro.png";
+    let cleanImage = "";
     let cleanName = "";
     let cleanRole = "";
     let cleanIsActive = true;
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         cleanImage = url;
       } else {
         const imageUrl = formData.get("image") as string;
-        cleanImage = (imageUrl && imageUrl !== "undefined" && imageUrl !== "null") ? sanitize(imageUrl) : "/Logo Win Agro.png";
+        cleanImage = (imageUrl && imageUrl !== "undefined" && imageUrl !== "null" && imageUrl !== "") ? sanitize(imageUrl) : "";
       }
 
       // 2. Process audio file upload
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       id = bid ?? "";
       cleanText = sanitize(text);
       cleanHighlight = sanitize(highlight);
-      cleanImage = (image && image !== "undefined" && image !== "null") ? sanitize(image) : "/Logo Win Agro.png";
+      cleanImage = (image && image !== "undefined" && image !== "null" && image !== "") ? sanitize(image) : "";
       cleanName = sanitize(name);
       cleanRole = sanitize(role);
       cleanIsActive = !!isActive;

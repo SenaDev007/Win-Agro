@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const cleanRole = sanitize(role);
     const cleanText = sanitize(text);
     const cleanHighlight = sanitize(highlight);
-    const cleanImage = (image && image !== "undefined" && image !== "null") ? sanitize(image) : "/Logo Win Agro.png";
+    const cleanImage = (image && image !== "undefined" && image !== "null" && image !== "") ? sanitize(image) : "";
 
     if (!cleanName || !cleanRole || !cleanText) {
       return NextResponse.json({ success: false, error: "Champs requis manquants" }, { status: 400 });

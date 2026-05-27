@@ -2138,12 +2138,18 @@ Nous sommes ravis de vous confirmer la disponibilité de ces produits. Afin de p
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <img 
-                          src={t.image || "/Logo Win Agro.png"} 
-                          alt={t.name} 
-                          className="w-10 h-10 rounded-full object-cover border border-primary-green/20"
-                          onError={(e) => { (e.target as any).src = "/Logo Win Agro.png"; }}
-                        />
+                        {t.image && t.image !== "/Logo Win Agro.png" ? (
+                          <img 
+                            src={t.image} 
+                            alt={t.name} 
+                            className="w-10 h-10 rounded-full object-cover border border-primary-green/20"
+                            onError={(e) => { (e.target as any).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary-green/20 flex items-center justify-center border border-primary-green/30 text-primary-green font-serif font-black text-sm select-none shrink-0">
+                            {t.name ? t.name.charAt(0).toUpperCase() : "?"}
+                          </div>
+                        )}
                         <div>
                           <h4 className="font-bold text-sm text-white">{t.name}</h4>
                           <p className="text-[10px] text-gray-400">{t.role}</p>
