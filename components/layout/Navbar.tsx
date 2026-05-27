@@ -25,6 +25,8 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
     const params = new URLSearchParams(window.location.search);
     const formParam = params.get("form") || params.get("f");
     const contactParam = params.get("contact");
+    const scrollParam = params.get("scroll");
+
     if (formParam) {
       let resolvedForm = formParam;
       if (formParam === "acc") resolvedForm = "accompagnement";
@@ -35,6 +37,16 @@ export default function Navbar({ hasPromo = false }: { hasPromo?: boolean }) {
     } else if (contactParam === "true") {
       setInitialFormPath(null);
       setIsModalOpen(true);
+    } else if (scrollParam === "contact") {
+      setTimeout(() => {
+        const targetElement = document.querySelector("#contact");
+        if (targetElement) {
+          const offset = 80;
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+        }
+      }, 500);
     }
   }, []);
 
