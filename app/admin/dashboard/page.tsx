@@ -56,6 +56,10 @@ const AdminAudioPlayer = ({ src }: { src: string }) => {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const proxiedSrc = src.startsWith("https://")
+    ? `/api/audio?src=${encodeURIComponent(src)}`
+    : src;
+
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioRef.current) return;
@@ -87,7 +91,7 @@ const AdminAudioPlayer = ({ src }: { src: string }) => {
     <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 w-full max-w-xs mt-2 transition-all">
       <audio
         ref={audioRef}
-        src={src}
+        src={proxiedSrc}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         className="hidden"

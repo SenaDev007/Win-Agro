@@ -57,6 +57,11 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
 
     audioRef.current.volume = 1.0;
 
+    // Use our audio proxy to avoid cross-origin blocking
+    const proxiedUrl = url.startsWith("https://")
+      ? `/api/audio?src=${encodeURIComponent(url)}`
+      : url;
+
     if (activeUrl === url) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -69,7 +74,7 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
         setIsPlaying(true);
       }
     } else {
-      audioRef.current.src = url;
+      audioRef.current.src = proxiedUrl;
       audioRef.current.load();
       audioRef.current.play().catch(err => {
         console.error("Audio playback error:", err);
