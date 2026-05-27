@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { Play, Pause } from "lucide-react";
 
 export interface Testimonial {
   text: string;
@@ -10,6 +11,7 @@ export interface Testimonial {
   image: string;
   name: string;
   role: string;
+  audioUrl?: string | null;
 }
 
 interface TestimonialsCarouselProps {
@@ -19,6 +21,76 @@ interface TestimonialsCarouselProps {
   cardHeight?: number; // Height of the testimonial card
   className?: string;
 }
+
+const AudioPlayer = ({ src }: { src: string }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) {
+      audioRef.current = new Audio(src);
+      audioRef.current.addEventListener("timeupdate", () => {
+        if (audioRef.current) {
+          const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+          setProgress(isNaN(pct) ? 0 : pct);
+        }
+      });
+      audioRef.current.addEventListener("ended", () => {
+        setIsPlaying(false);
+        setProgress(0);
+      });
+    }
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch((err) => console.error("Audio playback error:", err));
+      setIsPlaying(true);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 bg-primary-pale border border-primary-green/10 rounded-full px-2.5 py-1 w-full mt-2 transition-all">
+      <button
+        onClick={togglePlay}
+        className="w-6 h-6 rounded-full bg-primary-green text-white flex items-center justify-center hover:scale-105 transition-all shrink-0 cursor-pointer shadow-sm"
+      >
+        {isPlaying ? <Pause className="w-3 h-3 fill-white" /> : <Play className="w-3 h-3 fill-white ml-0.5" />}
+      </button>
+      
+      <div className="flex-grow flex flex-col justify-center min-w-0">
+        <div className="h-1 w-full bg-primary-green/15 rounded-full overflow-hidden relative">
+          <div 
+            className="h-full bg-primary-green rounded-full transition-all duration-100" 
+            style={{ width: `${progress}%` }} 
+          />
+        </div>
+        <span className="text-[8px] text-primary-green/70 font-semibold uppercase tracking-wider font-sans mt-0.5 truncate">
+          {isPlaying ? "Lecture note vocale..." : "Écouter le témoignage oral"}
+        </span>
+      </div>
+
+      {isPlaying && (
+        <div className="flex items-center gap-0.5 shrink-0 px-1">
+          <span className="w-0.5 h-1.5 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "0ms", animationDuration: "0.6s" }} />
+          <span className="w-0.5 h-3 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "150ms", animationDuration: "0.6s" }} />
+          <span className="w-0.5 h-2 bg-primary-green rounded-full animate-bounce" style={{ animationDelay: "300ms", animationDuration: "0.6s" }} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
   testimonials,
@@ -37,10 +109,8 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
       }
     };
 
-    // Run initial measure
     handleResize();
 
-    // Set a small timeout to ensure DOM layout has fully settled
     const timer = setTimeout(handleResize, 100);
 
     window.addEventListener("resize", handleResize);
@@ -69,12 +139,12 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
         }}
         className="flex gap-6 w-max"
       >
-        {loopTestimonials.map(({ text, highlight, image, name, role }, index) => (
+        {loopTestimonials.map(({ text, highlight, image, name, role, audioUrl }, index) => (
           <motion.div
             key={index}
             whileHover={{ scale: 1.03, y: -4, borderColor: "rgba(9, 137, 71, 0.3)" }}
             className="bg-white border border-primary-pale/60 shadow-md rounded-3xl p-6 flex flex-col justify-between flex-shrink-0 w-[340px] transition-colors duration-200 cursor-default card-shimmer"
-            style={{ height: cardHeight }}
+            style={{ height: audioUrl ? cardHeight + 25 : cardHeight }}
           >
             <p className="text-[13.5px] leading-relaxed text-gray-text font-sans break-words whitespace-normal overflow-hidden italic">
               {highlight
@@ -90,6 +160,8 @@ export const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
                   ))
                 : text}
             </p>
+
+            {audioUrl && <AudioPlayer src={audioUrl} />}
 
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-primary-pale/40">
               <Image

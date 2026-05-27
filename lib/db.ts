@@ -39,6 +39,7 @@ export interface TestimonialRecord {
   name: string;
   role: string;
   isActive: boolean;
+  audioUrl?: string | null;
 }
 
 export interface ServiceRecord {
@@ -503,7 +504,8 @@ class LocalStore {
         image: t.image,
         name: t.name,
         role: t.role,
-        isActive: t.isActive
+        isActive: t.isActive,
+        audioUrl: t.audioUrl || null
       }
     });
     return { ...t, id: randId };
@@ -519,7 +521,8 @@ class LocalStore {
           image: t.image,
           name: t.name,
           role: t.role,
-          isActive: t.isActive
+          isActive: t.isActive,
+          audioUrl: t.audioUrl !== undefined ? (t.audioUrl || null) : undefined
         }
       });
       return true;

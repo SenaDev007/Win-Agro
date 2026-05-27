@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     let cleanName = "";
     let cleanRole = "";
     let cleanIsActive = true;
+    let cleanAudioUrl: string | null = null;
 
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       const isActiveRaw = formData.get("isActive");
       cleanIsActive = isActiveRaw === "true";
 
+      // 1. Process image file upload
       const imageFile = formData.get("image");
       const isFile = imageFile && typeof imageFile !== "string" && "size" in imageFile;
       if (isFile && (imageFile as any).size > 0) {
@@ -68,6 +70,23 @@ export async function POST(request: Request) {
         cleanImage = (imageUrl && imageUrl !== "undefined" && imageUrl !== "null") ? sanitize(imageUrl) : "/Logo Win Agro.png";
       }
 
+      // 2. Process audio file upload
+      const audioFile = formData.get("audio");
+      const isAudioFile = audioFile && typeof audioFile !== "string" && "size" in audioFile;
+      if (isAudioFile && (audioFile as any).size > 0) {
+        const fileObj = audioFile as File;
+        if (fileObj.size > 15 * 1024 * 1024) {
+          return NextResponse.json({ success: false, error: "Fichier audio trop volumineux (max 15 MB)" }, { status: 400 });
+        }
+        const ext = fileObj.name.split(".").pop() || "mp3";
+        const blobName = `testimonials-audio/${uuidv4()}.${ext}`;
+        const { url } = await put(blobName, fileObj, { access: "public" });
+        cleanAudioUrl = url;
+      } else {
+        const audioUrl = formData.get("audioUrl") as string;
+        cleanAudioUrl = (audioUrl && audioUrl !== "undefined" && audioUrl !== "null" && audioUrl !== "") ? sanitize(audioUrl) : null;
+      }
+
       cleanText = sanitize(textRaw);
       cleanHighlight = sanitize(highlightRaw);
       cleanName = sanitize(nameRaw);
@@ -75,7 +94,7 @@ export async function POST(request: Request) {
     } else {
       // Fallback to JSON body
       const body = await request.json();
-      const { id: bid, text, highlight, image, name, role, isActive } = body;
+      const { id: bid, text, highlight, image, name, role, isActive, audioUrl } = body;
       id = bid ?? "";
       cleanText = sanitize(text);
       cleanHighlight = sanitize(highlight);
@@ -83,9 +102,8 @@ export async function POST(request: Request) {
       cleanName = sanitize(name);
       cleanRole = sanitize(role);
       cleanIsActive = !!isActive;
+      cleanAudioUrl = audioUrl ? sanitize(audioUrl) : null;
     }
-
-
 
     if (!cleanText || !cleanName || !cleanRole) {
       return NextResponse.json({ success: false, error: "Champs requis manquants" }, { status: 400 });
@@ -100,7 +118,8 @@ export async function POST(request: Request) {
         image: cleanImage,
         name: cleanName,
         role: cleanRole,
-        isActive: cleanIsActive
+        isActive: cleanIsActive,
+        audioUrl: cleanAudioUrl
       });
       if (success) {
         return NextResponse.json({ success: true });
@@ -115,7 +134,8 @@ export async function POST(request: Request) {
         image: cleanImage,
         name: cleanName,
         role: cleanRole,
-        isActive: cleanIsActive
+        isActive: cleanIsActive,
+        audioUrl: cleanAudioUrl
       });
       return NextResponse.json({ success: true, testimonial: newT });
     }

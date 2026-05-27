@@ -46,6 +46,7 @@ model Testimonial {
   name      String
   role      String
   isActive  Boolean  @default(true) @map("is_active")
+  audioUrl  String?  @map("audio_url")
 
   @@map("testimonials")
 }

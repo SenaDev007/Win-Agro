@@ -181,9 +181,11 @@ export default function AdminDashboard() {
     image: "",
     name: "",
     role: "",
-    isActive: true
+    isActive: true,
+    audioUrl: ""
   });
   const [testimonialImageFile, setTestimonialImageFile] = useState<File | null>(null);
+  const [testimonialAudioFile, setTestimonialAudioFile] = useState<File | null>(null);
   const [tSaving, setTSaving] = useState(false);
   const [tError, setTError] = useState("");
 
@@ -602,7 +604,8 @@ export default function AdminDashboard() {
         image: t.image,
         name: t.name,
         role: t.role,
-        isActive: t.isActive
+        isActive: t.isActive,
+        audioUrl: t.audioUrl || ""
       });
     } else {
       setTestimonialForm({
@@ -612,10 +615,12 @@ export default function AdminDashboard() {
         image: "",
         name: "",
         role: "",
-        isActive: true
+        isActive: true,
+        audioUrl: ""
       });
     }
     setTestimonialImageFile(null);
+    setTestimonialAudioFile(null);
     setTError("");
     setShowTestimonialForm(true);
   };
@@ -625,9 +630,15 @@ export default function AdminDashboard() {
     setTSaving(true);
     setTError("");
 
-    // Client-side size guard (5 MB)
+    // Client-side size guard (5 MB for image)
     if (testimonialImageFile && testimonialImageFile.size > 5 * 1024 * 1024) {
       setTError("Image trop volumineuse (max 5 MB)");
+      setTSaving(false);
+      return;
+    }
+    // Client-side size guard (15 MB for audio)
+    if (testimonialAudioFile && testimonialAudioFile.size > 15 * 1024 * 1024) {
+      setTError("Fichier audio trop volumineux (max 15 MB)");
       setTSaving(false);
       return;
     }
@@ -642,28 +653,33 @@ export default function AdminDashboard() {
       formData.append("isActive",  String(testimonialForm.isActive));
 
       if (testimonialImageFile) {
-        // New file chosen → upload to Vercel Blob via API
         formData.append("image", testimonialImageFile);
       } else if (testimonialForm.image) {
-        // No new file → preserve existing URL (edit mode)
         formData.append("image", testimonialForm.image);
+      }
+
+      if (testimonialAudioFile) {
+        formData.append("audio", testimonialAudioFile);
+      } else if (testimonialForm.audioUrl) {
+        formData.append("audioUrl", testimonialForm.audioUrl);
       }
 
       const res = await fetch("/api/admin/testimonials", {
         method: "POST",
-        // No explicit Content-Type → browser sets multipart boundary
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
         setTestimonialImageFile(null);
+        setTestimonialAudioFile(null);
         setShowTestimonialForm(false);
         loadDashboardData();
       } else {
         setTError(data.error || "Erreur de validation");
       }
     } catch (err) {
-      setTError("Erreur lors de l'enregistrement");
+      console.error(err);
+      setTError("Erreur lors de la sauvegarde.");
     } finally {
       setTSaving(false);
     }
@@ -2054,6 +2070,11 @@ Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos
                     </div>
 
                     <p className="text-xs text-gray-300 italic font-sans">"{t.text}"</p>
+                    {t.audioUrl && (
+                      <div className="mt-2 pt-2 border-t border-white/5">
+                        <audio src={t.audioUrl} controls className="w-full h-8 text-xs max-w-xs outline-none" />
+                      </div>
+                    )}
                     <p className="text-[10.5px] text-primary-green font-semibold">Mise en avant: <span className="text-white">{t.highlight || "Aucune"}</span></p>
                   </div>
 
@@ -2183,6 +2204,52 @@ Afin de planifier la livraison ou l'enlèvement, pourriez-vous nous indiquer vos
                           onChange={(e) => {
                             const file = e.target.files?.[0] ?? null;
                             setTestimonialImageFile(file);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 font-semibold">Note vocale / Audio (optionnel – max 15 MB)</label>
+
+                      {/* Preview: existing audio or newly-selected file */}
+                      {(testimonialForm.audioUrl || testimonialAudioFile) && (
+                        <div className="flex flex-col gap-2 p-2 bg-black/30 border border-white/5 rounded-xl">
+                          <div className="flex items-center gap-3">
+                             <span className="text-[11px] text-gray-400 truncate flex-1 font-mono">
+                               {testimonialAudioFile ? testimonialAudioFile.name : testimonialForm.audioUrl}
+                             </span>
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 setTestimonialAudioFile(null);
+                                 setTestimonialForm(prev => ({ ...prev, audioUrl: "" }));
+                               }}
+                               className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+                             >
+                               <X className="w-3.5 h-3.5" />
+                             </button>
+                           </div>
+                           {!testimonialAudioFile && testimonialForm.audioUrl && (
+                             <audio src={testimonialForm.audioUrl} controls className="w-full h-8 text-xs outline-none" />
+                           )}
+                         </div>
+                       )}
+
+                      <label className="flex items-center gap-2 w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-gray-300 hover:border-primary-green/50 transition-colors cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-primary-green shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                        <span className="text-xs">
+                          {testimonialAudioFile ? testimonialAudioFile.name : "Choisir une note vocale…"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+                            setTestimonialAudioFile(file);
                           }}
                         />
                       </label>
