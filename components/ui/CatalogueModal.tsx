@@ -33,6 +33,7 @@ export interface CatalogueProduct {
   unit: string;
   promoPrice?: number | null;
   promoUntil?: string | null;
+  category?: string;
 }
 
 export interface CatalogueCategory {
@@ -253,9 +254,17 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(categoryKey);
 
   const dynamicProducts = propProducts !== undefined ? propProducts : localProducts;
   const discounts = propDiscounts !== undefined ? propDiscounts : localDiscounts;
+
+  // Sync activeCategoryKey when categoryKey changes from prop
+  useEffect(() => {
+    if (categoryKey) {
+      setActiveCategoryKey(categoryKey);
+    }
+  }, [categoryKey]);
 
   // Fetch updated catalog products from the admin store dynamically
   useEffect(() => {
@@ -276,16 +285,16 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
     }
   }, [isOpen, propProducts]);
 
-  const rawCategory = catalogueData.find(c => c.key === categoryKey) ?? null;
+  const rawCategory = catalogueData.find(c => c.key === activeCategoryKey) ?? null;
 
   // Merge static metadata with dynamic price and status variables from the database
   const category = React.useMemo(() => {
-    if (!rawCategory) return null;
+    if (!rawCategory || !activeCategoryKey) return null;
     
     // If we have fetched products from the database, use those for this category.
     // Otherwise fall back to the static catalogue array as a loading preview.
     const sourceProducts = dynamicProducts.length > 0
-      ? dynamicProducts.filter((dp: any) => dp.category === categoryKey)
+      ? dynamicProducts.filter((dp: any) => dp.category === activeCategoryKey)
       : rawCategory.products.map(p => ({ ...p, isActive: true }));
 
     const mappedProducts = sourceProducts
@@ -299,7 +308,7 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
         const individualPromoActive = promoPrice !== null && promoPrice !== undefined && promoUntil && new Date(promoUntil) > new Date();
         
         if (!individualPromoActive) {
-          const catDiscount = categoryKey ? discounts?.[categoryKey] : null;
+          const catDiscount = discounts?.[activeCategoryKey];
           const catPromoActive = catDiscount && catDiscount.percentage > 0 && catDiscount.until && new Date(catDiscount.until) > new Date() && price !== null;
           
           if (catPromoActive) {
@@ -324,15 +333,56 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
       ...rawCategory,
       products: mappedProducts
     };
-  }, [rawCategory, dynamicProducts, categoryKey, discounts]);
+  }, [rawCategory, dynamicProducts, activeCategoryKey, discounts]);
 
-  // Reset cart and step when category changes
+  // Gather all products from all categories
+  const allProducts = React.useMemo(() => {
+    if (dynamicProducts && dynamicProducts.length > 0) {
+      return dynamicProducts;
+    }
+    // Fallback to static catalogue data products
+    return catalogueData.flatMap(c => c.products.map(p => ({ ...p, category: c.key, isActive: true })));
+  }, [dynamicProducts]);
+
+  // Map all products with active promotions/discounts applied
+  const mappedAllProducts = React.useMemo(() => {
+    return allProducts.map((p: any) => {
+      const price = p.price;
+      let promoPrice = p.promoPrice;
+      let promoUntil = p.promoUntil;
+
+      // Apply global category-level discount if active and no individual promo is active
+      const individualPromoActive = promoPrice !== null && promoPrice !== undefined && promoUntil && new Date(promoUntil) > new Date();
+      
+      if (!individualPromoActive && p.category) {
+        const catDiscount = discounts?.[p.category];
+        const catPromoActive = catDiscount && catDiscount.percentage > 0 && catDiscount.until && new Date(catDiscount.until) > new Date() && price !== null;
+        
+        if (catPromoActive) {
+          promoPrice = Math.round(price * (1 - catDiscount.percentage / 100));
+          promoUntil = catDiscount.until;
+        }
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description || "",
+        category: p.category,
+        price: price,
+        unit: p.unit.startsWith("FCFA") ? p.unit : `FCFA / ${p.unit}`,
+        isActive: p.isActive !== undefined ? p.isActive : true,
+        promoPrice: promoPrice,
+        promoUntil: promoUntil
+      };
+    });
+  }, [allProducts, discounts]);
+
+  // Reset step when category changes inside modal
   useEffect(() => {
-    setCart({});
     setStep("list");
-    setForm({ prenom: "", nom: "", whatsapp: "", email: "", ville: "" });
     setError("");
-  }, [categoryKey]);
+  }, [activeCategoryKey]);
 
   // Reset when modal closes
   useEffect(() => {
@@ -340,7 +390,6 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
       setTimeout(() => {
         setStep("list");
         setForm({ prenom: "", nom: "", whatsapp: "", email: "", ville: "" });
-        setCart({});
         setError("");
       }, 300);
     }
@@ -386,11 +435,11 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
     });
   }, []);
 
-  const cartItems: CartItem[] = category
-    ? category.products
-        .filter(p => (cart[p.id] ?? 0) > 0)
-        .map(p => ({ product: p, qty: cart[p.id] }))
-    : [];
+  const cartItems: CartItem[] = React.useMemo(() => {
+    return mappedAllProducts
+      .filter(p => (cart[p.id] ?? 0) > 0)
+      .map(p => ({ product: p, qty: cart[p.id] }));
+  }, [mappedAllProducts, cart]);
 
   const totalItems = cartItems.reduce((s, i) => s + i.qty, 0);
   const totalPrice = cartItems.reduce((s, i) => {
@@ -414,16 +463,25 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
     setLoading(true);
 
     try {
-      if (!category || cartItems.length === 0) return;
+      if (cartItems.length === 0) return;
 
       const token = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_session") : null;
       const utmSource = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_source") : null;
       const utmMedium = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_medium") : null;
       const utmCampaign = typeof window !== "undefined" ? sessionStorage.getItem("win_agro_utm_campaign") : null;
 
+      // Find all unique categories in cart
+      const uniqueCats = Array.from(new Set(cartItems.map(item => item.product.category || ""))).filter(Boolean);
+      const catLabels: Record<string, string> = {
+        elevage: "Élevage",
+        nutrition: "Nutrition Animale",
+        agriculture: "Agriculture & Plants"
+      };
+      const formattedCategories = uniqueCats.map(c => catLabels[c] || c).join(", ") || "Multi-produits";
+
       // Construct lead details object with the products ordered
       const detailsObj: Record<string, string> = {
-        "Catégorie catalogue": category.title,
+        "Catégorie catalogue": formattedCategories,
         "Total estimé (FCFA)": `${totalPrice.toLocaleString("fr-FR")} FCFA`,
       };
 
@@ -438,7 +496,7 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: `Commande Catalogue — ${category.title}`,
+          type: `Commande Catalogue — ${formattedCategories}`,
           prenom: form.prenom,
           nom: form.nom,
           whatsapp: form.whatsapp,
@@ -448,7 +506,7 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
           utmSource: utmSource || undefined,
           utmMedium: utmMedium || undefined,
           utmCampaign: utmCampaign || undefined,
-          ...cart // passes raw cart items for auto-save compatibility
+          ...cart
         })
       });
 
@@ -466,7 +524,7 @@ export default function CatalogueModal({ isOpen, onClose, categoryKey, products:
 
       const message = `Bonjour Victoire,
  
-Je m'appelle ${form.prenom} ${form.nom}. Je souhaite passer une commande dans la catégorie *${category.title}* :
+Je m'appelle ${form.prenom} ${form.nom}. Je souhaite passer une commande catalogue pour les produits suivants (*${formattedCategories}*) :
  
 ${lines.join("\n")}
  
@@ -476,7 +534,7 @@ Mes coordonnées :
 - Localisation : ${form.ville}
 - WhatsApp : ${form.whatsapp}
 - E-mail : ${form.email}
-
+ 
 Merci de confirmer les disponibilités et modalités de livraison. Merci à vous, dans l'attente de votre réponse.`;
 
       const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
@@ -565,6 +623,48 @@ Merci de confirmer les disponibilités et modalités de livraison. Merci à vous
                     Entrez vos coordonnées. Votre commande sera enregistrée dans le suivi clients et ouverte directement sur WhatsApp.
                   </p>
 
+                  {/* Interactive Cart Summary */}
+                  <div className="bg-gray-50 rounded-2xl border border-gray-200/60 p-4 mb-5">
+                    <h4 className="text-xs font-bold text-primary-deep uppercase tracking-wider mb-3">Récapitulatif de votre commande</h4>
+                    <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                      {cartItems.map(item => {
+                        const promoActive = isPromoActive(item.product);
+                        const activePrice = promoActive ? (item.product.promoPrice ?? item.product.price ?? 0) : (item.product.price ?? 0);
+                        return (
+                          <div key={item.product.id} className="flex justify-between items-center text-xs font-sans">
+                            <div className="flex-1 min-w-0 pr-3">
+                              <p className="font-bold text-gray-700 truncate">{item.product.name}</p>
+                              <p className="text-[10px] text-gray-400">
+                                {item.qty} × {activePrice.toLocaleString("fr-FR")} FCFA {promoActive && <span className="text-red-500 font-bold">(PROMO)</span>}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => removeFromCart(item.product.id)}
+                                className="w-6 h-6 rounded-full bg-white hover:bg-red-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-4 text-center font-bold text-gray-700">{item.qty}</span>
+                              <button
+                                type="button"
+                                onClick={() => addToCart(item.product.id)}
+                                className="w-6 h-6 rounded-full bg-white hover:bg-primary-pale border border-gray-100 flex items-center justify-center text-gray-400 hover:text-primary-green transition-colors cursor-pointer"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="border-t border-gray-200/60 mt-3 pt-3 flex justify-between items-center font-sans font-black text-sm">
+                      <span className="text-primary-deep">Total estimé</span>
+                      <span className="text-primary-green text-base">{totalPrice.toLocaleString("fr-FR")} FCFA</span>
+                    </div>
+                  </div>
+
                   <form onSubmit={handleCheckoutSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <Input label="Prénom" name="prenom" value={form.prenom} onChange={handleChange} placeholder="Kokou" required />
@@ -578,7 +678,7 @@ Merci de confirmer les disponibilités et modalités de livraison. Merci à vous
 
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || cartItems.length === 0}
                       className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-primary-green hover:bg-primary-green/90 text-white font-sans font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 cursor-pointer mt-4"
                     >
                       {loading ? (
@@ -591,31 +691,55 @@ Merci de confirmer les disponibilités et modalités de livraison. Merci à vous
                 </div>
               ) : (
                 /* Products Grid Step */
-                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {category.products.map(product => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        qty={cart[product.id] ?? 0}
-                        onAdd={() => addToCart(product.id)}
-                        onRemove={() => removeFromCart(product.id)}
-                        isHighlighted={product.id === initialProductId}
-                      />
-                    ))}
+                <div className="overflow-y-auto flex-1 flex flex-col min-h-0 bg-[#FAFAF3]">
+                  {/* Category Tab Selector inside modal */}
+                  <div className="flex border-b border-gray-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 py-2 gap-2 overflow-x-auto shrink-0 shadow-sm">
+                    {[
+                      { key: "elevage", label: "Élevage", icon: Bird },
+                      { key: "nutrition", label: "Nutrition", icon: Wheat },
+                      { key: "agriculture", label: "Agriculture", icon: Trees },
+                    ].map(cat => {
+                      const TabIcon = cat.icon;
+                      const isActive = cat.key === activeCategoryKey;
+                      return (
+                        <button
+                          key={cat.key}
+                          onClick={() => setActiveCategoryKey(cat.key)}
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${isActive ? "bg-primary-green text-white shadow-md shadow-primary-green/20" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                        >
+                          <TabIcon className="w-3.5 h-3.5" />
+                          {cat.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {/* Professional Win Agro signature and logo */}
-                  <div className="pt-8 mt-6 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
-                    <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
-                    <p className="text-sm font-serif font-bold text-primary-deep font-sans">L'équipe Win Agro</p>
-                    <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
-                      Commandes sécurisées et gérées par notre équipe. Retrait sur place ou livraison disponible dans tout le Bénin.
-                    </p>
-                  </div>
+                  <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {category.products.map(product => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          qty={cart[product.id] ?? 0}
+                          onAdd={() => addToCart(product.id)}
+                          onRemove={() => removeFromCart(product.id)}
+                          isHighlighted={product.id === initialProductId}
+                        />
+                      ))}
+                    </div>
 
-                  {/* Bottom padding for cart bar */}
-                  <div className="h-28" />
+                    {/* Professional Win Agro signature and logo */}
+                    <div className="pt-8 mt-6 border-t border-gray-200/60 flex flex-col items-center gap-1.5">
+                      <img src="/Logo Win Agro.png" alt="Signature Win Agro" className="w-12 h-12 object-contain mix-blend-multiply opacity-80" />
+                      <p className="text-sm font-serif font-bold text-primary-deep font-sans">L'équipe Win Agro</p>
+                      <p className="text-[10px] text-gray-400 font-sans text-center max-w-[280px]">
+                        Commandes sécurisées et gérées par notre équipe. Retrait sur place ou livraison disponible dans tout le Bénin.
+                      </p>
+                    </div>
+
+                    {/* Bottom padding for cart bar */}
+                    <div className="h-28" />
+                  </div>
                 </div>
               )}
 
