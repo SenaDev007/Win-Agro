@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Ex: contact@winagrotech.com"
+                placeholder="Saisir votre e-mail"
                 required
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-primary-green/20 bg-black/40 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50 transition-all font-sans placeholder:text-gray-600"
               />
